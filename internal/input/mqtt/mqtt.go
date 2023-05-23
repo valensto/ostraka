@@ -3,7 +3,9 @@ package mqtt
 import (
 	"fmt"
 	mqtt "github.com/eclipse/paho.mqtt.golang"
+	"github.com/google/uuid"
 	"github.com/valensto/ostraka/internal/config"
+	"log"
 )
 
 type Input struct {
@@ -11,10 +13,10 @@ type Input struct {
 	params config.MQTTParams
 }
 
-func New(params config.MQTTParams) (*Input, error) {
+func New(params config.MQTTParams, _ chan<- map[string]any) error {
 	opts := mqtt.NewClientOptions()
 	opts.AddBroker(params.Broker)
-	opts.SetClientID(fmt.Sprintf("%s-%s", params.User, "ostraka"))
+	opts.SetClientID(fmt.Sprintf("%s-%s", uuid.New(), "ostraka"))
 	opts.SetUsername(params.User)
 	opts.SetPassword(params.Password)
 
@@ -25,7 +27,7 @@ func New(params config.MQTTParams) (*Input, error) {
 
 	client := mqtt.NewClient(opts)
 	if token := client.Connect(); token.Wait() && token.Error() != nil {
-		return nil, fmt.Errorf("error connecting to mqtt broker: %w", token.Error())
+		return fmt.Errorf("error connecting to mqtt broker: %w", token.Error())
 	}
 
 	service := Input{
@@ -33,12 +35,7 @@ func New(params config.MQTTParams) (*Input, error) {
 		params: params,
 	}
 
-	err := service.subscribe()
-	if err != nil {
-		return nil, err
-	}
-
-	return &service, nil
+	return service.subscribe()
 }
 
 func (s *Input) Disconnect() {
@@ -53,6 +50,7 @@ func (s *Input) subscribe() error {
 		return fmt.Errorf("error subscribing to topic: %s", s.params.Topic)
 	}
 
+	log.Printf("new mqtt input: %s registered", s.params.Topic)
 	return nil
 }
 

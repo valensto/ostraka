@@ -58,3 +58,12 @@ func (file *File) populateOutputs() error {
 	file.Outputs = parsedOutputs
 	return nil
 }
+
+func (o Output) ToSSEParams() (SSEParams, error) {
+	params, ok := o.Params.(SSEParams)
+	if !ok {
+		return SSEParams{}, fmt.Errorf("output params are not of type SSEParams")
+	}
+
+	return params, nil
+}

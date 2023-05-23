@@ -75,6 +75,24 @@ func (file *File) populateInputs() error {
 	return nil
 }
 
+func (i Input) ToWebhookParams() (WebhookParams, error) {
+	params, ok := i.Params.(WebhookParams)
+	if !ok {
+		return WebhookParams{}, fmt.Errorf("input params are not of type WebhookParams")
+	}
+
+	return params, nil
+}
+
+func (i Input) ToMQTTParams() (MQTTParams, error) {
+	params, ok := i.Params.(MQTTParams)
+	if !ok {
+		return MQTTParams{}, fmt.Errorf("input params are not of type MQTTParams")
+	}
+
+	return params, nil
+}
+
 func (d Decoder) Decode(data []byte) (Decoder, error) {
 	if d.Type != "json" {
 		return Decoder{}, fmt.Errorf("unknown decoder type: %s", d.Type)
