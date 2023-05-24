@@ -5,6 +5,7 @@ import (
 	"github.com/valensto/ostraka/internal/config"
 	"github.com/valensto/ostraka/internal/dispatcher"
 	"log"
+	"net/http"
 )
 
 func main() {
@@ -19,6 +20,12 @@ func run() error {
 		return err
 	}
 
-	d := dispatcher.New(conf, chi.NewRouter())
-	return d.Dispatch()
+	router := chi.NewRouter()
+
+	err = dispatcher.Dispatch(conf, router)
+	if err != nil {
+		return err
+	}
+
+	return http.ListenAndServe(":4000", router)
 }

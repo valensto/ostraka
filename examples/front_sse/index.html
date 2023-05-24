@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<body>
+<h1>SSE subscription</h1>
+<div id="sse-data"></div>
+
+<script>
+    const endpoint = "http://localhost:4000/sse/orders"
+    const eventSource = new EventSource(endpoint);
+
+    eventSource.addEventListener('message', (event) => {
+        const eventData = JSON.parse(event.data);
+        const sseDataElement = document.getElementById('sse-data');
+        sseDataElement.innerHTML += `<p>New event: ${JSON.stringify(eventData)}</p>`;
+    });
+
+    eventSource.addEventListener('error', (error) => {
+        console.log('SSE error', error)
+    });
+</script>
+</body>
+</html>

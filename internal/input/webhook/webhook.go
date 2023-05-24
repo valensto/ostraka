@@ -1,59 +1,57 @@
 package webhook
 
 import (
-	"encoding/json"
-	"fmt"
 	"github.com/go-chi/chi/v5"
 	"github.com/valensto/ostraka/internal/config"
+	"io"
 	"log"
 	"net/http"
 )
 
 type Input struct {
-	params config.WebhookParams
 	router *chi.Mux
+	config.Input
+	params config.WebhookParams
+	events chan<- map[string]any
 }
 
-func New(params config.WebhookParams, router *chi.Mux, events chan<- map[string]any) error {
-	i := Input{
-		params: params,
-		router: router,
+func New(input config.Input, router *chi.Mux, events chan<- map[string]any) (*Input, error) {
+	params, err := input.ToWebhookParams()
+	if err != nil {
+		return nil, err
 	}
 
-	i.router.Post(params.Endpoint, i.endpoint(events))
+	return &Input{
+		router: router,
+		Input:  input,
+		params: params,
+		events: events,
+	}, nil
+}
 
-	log.Printf("new webhook input: %s registered", params.Endpoint)
+func (i *Input) Subscribe() error {
+	i.router.Post(i.params.Endpoint, i.endpoint())
+
+	log.Printf("new webhook input: %s registered with endpoint %s", i.Name, i.params.Endpoint)
 	return nil
 }
 
-func (i *Input) endpoint(events chan<- map[string]any) http.HandlerFunc {
+func (i *Input) endpoint() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		data, err := i.decode(w, r)
+		bytes, err := io.ReadAll(r.Body)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 
-		events <- data
+		decoded, err := i.Decoder.Decode(bytes)
+		if err != nil {
+			log.Printf("error decoding webhook input: %s", err)
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		i.events <- decoded
 		w.WriteHeader(http.StatusOK)
 	}
-}
-
-func (i *Input) decode(_ http.ResponseWriter, r *http.Request) (map[string]any, error) {
-	if r.ContentLength == 0 {
-		return nil, nil
-	}
-
-	var data map[string]any
-	err := json.NewDecoder(r.Body).Decode(&data)
-	if err != nil {
-		return nil, fmt.Errorf("error decoding request body")
-	}
-
-	// check if the data is valid
-	// map payload fields to the event config fields
-	// use receiver on Decoder struct to add mappers logic
-	// return mapped data
-
-	return data, nil
 }

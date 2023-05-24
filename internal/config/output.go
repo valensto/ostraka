@@ -5,6 +5,10 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+const (
+	SSE = "sse"
+)
+
 type Event struct {
 	Type   string  `yaml:"type" validate:"required"`
 	Fields []Field `yaml:"fields" validate:"required,dive,required"`
@@ -40,7 +44,7 @@ func (file *File) populateOutputs() error {
 		}
 
 		switch output.Type {
-		case "sse":
+		case SSE:
 			var params SSEParams
 			err := unmarshalParams(marshalled, &params)
 			if err != nil {

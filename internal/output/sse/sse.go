@@ -2,7 +2,6 @@ package sse
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"github.com/go-chi/chi/v5"
 	"github.com/valensto/ostraka/internal/config"
@@ -10,7 +9,7 @@ import (
 	"net/http"
 )
 
-type Output struct {
+type output struct {
 	router        *chi.Mux
 	params        config.SSEParams
 	clients       map[client]bool
@@ -22,8 +21,8 @@ type Output struct {
 
 type client chan []byte
 
-func New(params config.SSEParams, router *chi.Mux, events <-chan map[string]any) error {
-	output := Output{
+func Register(params config.SSEParams, router *chi.Mux, events <-chan []byte) error {
+	output := output{
 		router:        router,
 		params:        params,
 		clients:       make(map[client]bool),
@@ -32,7 +31,7 @@ func New(params config.SSEParams, router *chi.Mux, events <-chan map[string]any)
 		bufSize:       2,
 		eventCounter:  0,
 	}
-
+	
 	output.listen(events)
 	output.router.Get(params.Endpoint, output.endpoint())
 
@@ -40,7 +39,7 @@ func New(params config.SSEParams, router *chi.Mux, events <-chan map[string]any)
 	return nil
 }
 
-func (s Output) endpoint() http.HandlerFunc {
+func (s output) endpoint() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		fl, ok := w.(http.Flusher)
 		if !ok {
@@ -74,7 +73,7 @@ func (s Output) endpoint() http.HandlerFunc {
 	}
 }
 
-func (s Output) listen(events <-chan map[string]any) {
+func (s output) listen(events <-chan []byte) {
 	go func() {
 		for {
 			select {
@@ -85,13 +84,7 @@ func (s Output) listen(events <-chan map[string]any) {
 				delete(s.clients, cl)
 
 			case event := <-events:
-				data, err := json.Marshal(event)
-				if err != nil {
-					log.Printf("error marshaling event: %v", err)
-					return
-				}
-
-				msg := format(fmt.Sprintf("%v", s.eventCounter), "message", data)
+				msg := format(fmt.Sprintf("%v", s.eventCounter), "message", event)
 				s.eventCounter++
 				for cl := range s.clients {
 					cl <- msg.Bytes()

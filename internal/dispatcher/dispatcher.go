@@ -1,29 +1,40 @@
 package dispatcher
 
 import (
-	"fmt"
+	"encoding/json"
 	"github.com/go-chi/chi/v5"
 	"github.com/valensto/ostraka/internal/config"
-	"github.com/valensto/ostraka/internal/input/mqtt"
-	"github.com/valensto/ostraka/internal/input/webhook"
-	"github.com/valensto/ostraka/internal/output/sse"
+	"log"
 )
 
-type Dispatcher struct {
-	router *chi.Mux
-	conf   config.Config
+type file struct {
+	config       config.File
+	router       *chi.Mux
+	inputEvents  chan map[string]any
+	outputEvents chan []byte
 }
 
-func New(conf config.Config, router *chi.Mux) *Dispatcher {
-	return &Dispatcher{
-		conf:   conf,
-		router: router,
+func newFile(conf config.File, router *chi.Mux) *file {
+	return &file{
+		config:       conf,
+		router:       router,
+		inputEvents:  make(chan map[string]any, len(conf.Inputs)),
+		outputEvents: make(chan []byte, len(conf.Outputs)),
 	}
 }
 
-func (d Dispatcher) Dispatch() error {
-	for _, file := range d.conf {
-		err := d.proceedFile(file)
+func Dispatch(conf config.Config, router *chi.Mux) error {
+	for _, file := range conf {
+		f := newFile(file, router)
+
+		go f.dispatchEvents()
+
+		err := f.proceedInputs()
+		if err != nil {
+			return err
+		}
+
+		err = f.proceedOutputs()
 		if err != nil {
 			return err
 		}
@@ -32,65 +43,17 @@ func (d Dispatcher) Dispatch() error {
 	return nil
 }
 
-func (d Dispatcher) proceedFile(file config.File) error {
-	events := make(chan map[string]any, len(file.Inputs))
-
-	err := d.proceedInputs(file.Inputs, events)
-	if err != nil {
-		return err
-	}
-
-	err = d.proceedOutputs(file.Outputs, events)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (d Dispatcher) proceedOutputs(outputs []config.Output, events <-chan map[string]any) error {
-	for _, output := range outputs {
-		switch output.Type {
-		case "sse":
-			params, err := output.ToSSEParams()
+func (f file) dispatchEvents() {
+	for {
+		select {
+		case event := <-f.inputEvents:
+			data, err := json.Marshal(event)
 			if err != nil {
-				return err
+				log.Printf("error marshaling event: %v", err)
+				continue
 			}
-			return sse.New(params, d.router, events)
 
-		default:
-			return fmt.Errorf("unknown output type: %s", output.Type)
+			f.outputEvents <- data
 		}
 	}
-
-	return nil
-}
-
-func (d Dispatcher) proceedInputs(inputs []config.Input, events chan<- map[string]any) error {
-	for _, input := range inputs {
-		switch input.Type {
-		case "webhook":
-			params, err := input.ToWebhookParams()
-			if err != nil {
-				return err
-			}
-			return webhook.New(params, d.router, events)
-
-		case "mqtt":
-			params, err := input.ToMQTTParams()
-			if err != nil {
-				return err
-			}
-
-			err = mqtt.New(params, events)
-			if err != nil {
-				return err
-			}
-
-		default:
-			return fmt.Errorf("unknown input type: %s", input.Type)
-		}
-	}
-
-	return nil
 }
