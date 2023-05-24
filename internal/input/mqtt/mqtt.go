@@ -11,9 +11,10 @@ import (
 type Input struct {
 	client mqtt.Client
 	params config.MQTTParams
+	events chan<- map[string]any
 }
 
-func New(params config.MQTTParams, _ chan<- map[string]any) error {
+func New(params config.MQTTParams, events chan<- map[string]any) error {
 	opts := mqtt.NewClientOptions()
 	opts.AddBroker(params.Broker)
 	opts.SetClientID(fmt.Sprintf("%s-%s", uuid.New(), "ostraka"))
@@ -33,6 +34,7 @@ func New(params config.MQTTParams, _ chan<- map[string]any) error {
 	service := Input{
 		client: client,
 		params: params,
+		events: events,
 	}
 
 	return service.subscribe()
@@ -62,6 +64,13 @@ func (s *Input) eventPubHandler() mqtt.MessageHandler {
 			return
 		}
 
+		data := map[string]any{}
+		// check if the data is valid
+		// map payload fields to the event config fields
+		// use receiver on Decoder struct to add mappers logic
+		// send mapped data
+
+		s.events <- data
 		fmt.Printf("Received message: %s from topic: %s\n", decoded, msg.Topic())
 	}
 }

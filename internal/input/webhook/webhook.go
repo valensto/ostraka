@@ -50,5 +50,10 @@ func (i *Input) decode(_ http.ResponseWriter, r *http.Request) (map[string]any, 
 		return nil, fmt.Errorf("error decoding request body")
 	}
 
+	// check if the data is valid
+	// map payload fields to the event config fields
+	// use receiver on Decoder struct to add mappers logic
+	// return mapped data
+
 	return data, nil
 }
