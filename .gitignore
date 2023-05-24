@@ -1,6 +1,8 @@
 .env
-Taskfile.yaml
-Taskfile.yml
+/internal/config/resources/*.yaml
+/internal/config/resources/*.json
+/internal/config/resources/*.xml
+/internal/config/resources/*.yml
 # Created by .ignore support plugin (hsz.mobi)
 ### Go template
 # Binaries for programs and plugins
@@ -153,3 +155,4 @@ Temporary Items
 
 # Built Visual Studio Code Extensions
 *.vsix
+
