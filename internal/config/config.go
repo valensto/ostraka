@@ -36,7 +36,7 @@ func LoadConfig() (Config, error) {
 			return err
 		}
 
-		if !info.IsDir() && strings.HasSuffix(info.Name(), ".yaml") {
+		if !info.IsDir() && (strings.HasSuffix(info.Name(), ".yaml") || strings.HasSuffix(info.Name(), ".yml")) {
 			filePath := filepath.Join(directory, info.Name())
 
 			parsedFile, err := parseFile(filePath)

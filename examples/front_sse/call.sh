@@ -9,5 +9,6 @@ for i in {1..10}; do
         "o_status": "completed"
     }'
 
+    echo "call to webhook/orders $i"
     sleep 2
 done

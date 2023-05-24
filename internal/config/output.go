@@ -18,12 +18,12 @@ type Output struct {
 	Name       string      `yaml:"name" validate:"required"`
 	Type       string      `yaml:"type" validate:"required"`
 	Params     interface{} `yaml:"params" validate:"required"`
-	Conditions []Condition `yaml:"conditions,omitempty"`
+	Conditions []Condition `yaml:"conditions"`
 }
 
 type SSEParams struct {
 	Endpoint string `yaml:"endpoint" validate:"required"`
-	Auth     Auth   `yaml:"auth,omitempty"`
+	Auth     Auth   `yaml:"auth" validate:"omitempty"`
 }
 
 type Condition struct {
