@@ -6,9 +6,15 @@ VOLUMES="$(shell docker volume ls)"
 SUCCESS=[ done "\xE2\x9C\x94" ]
 
 .PHONY: all
-all: down
+all:
 	@echo [ starting ostraka... ]
-	docker compose up
+	docker-compose up
+	@echo $(SUCCESS)
+
+.PHONY: re
+re: down
+	@echo [ restarting ostraka... ]
+	docker-compose up
 	@echo $(SUCCESS)
 
 .PHONY: down
