@@ -1,20 +1,29 @@
 package mqtt
 
 import (
+	"encoding/json"
 	"fmt"
 	mqtt "github.com/eclipse/paho.mqtt.golang"
+	"github.com/google/uuid"
+	log "github.com/sirupsen/logrus"
 	"github.com/valensto/ostraka/internal/config"
 )
 
 type Input struct {
 	client mqtt.Client
 	params config.MQTTParams
+	events chan<- map[string]any
 }
 
-func New(params config.MQTTParams) (*Input, error) {
+func New(input config.Input, events chan<- map[string]any) (*Input, error) {
+	params, err := input.ToMQTTParams()
+	if err != nil {
+		return nil, err
+	}
+
 	opts := mqtt.NewClientOptions()
 	opts.AddBroker(params.Broker)
-	opts.SetClientID(fmt.Sprintf("%s-%s", params.User, "ostraka"))
+	opts.SetClientID(fmt.Sprintf("%s-%s", uuid.New(), "ostraka"))
 	opts.SetUsername(params.User)
 	opts.SetPassword(params.Password)
 
@@ -28,54 +37,47 @@ func New(params config.MQTTParams) (*Input, error) {
 		return nil, fmt.Errorf("error connecting to mqtt broker: %w", token.Error())
 	}
 
-	service := Input{
-		client: client,
+	return &Input{
 		params: params,
-	}
-
-	err := service.subscribe()
-	if err != nil {
-		return nil, err
-	}
-
-	return &service, nil
+		events: events,
+		client: client,
+	}, nil
 }
 
-func (s *Input) Disconnect() {
-	s.client.Disconnect(250)
-}
-
-func (s *Input) subscribe() error {
-	token := s.client.Subscribe(s.params.Topic, 1, s.eventPubHandler())
+func (i *Input) Subscribe() error {
+	token := i.client.Subscribe(i.params.Topic, 1, i.eventPubHandler())
 	token.Wait()
 
 	if token.Error() != nil {
-		return fmt.Errorf("error subscribing to topic: %s", s.params.Topic)
+		return fmt.Errorf("error subscribing to topic: %s", i.params.Topic)
 	}
 
+	log.Infof("new mqtt input: %s registered", i.params.Topic)
 	return nil
 }
 
-func (s *Input) eventPubHandler() mqtt.MessageHandler {
+func (i *Input) eventPubHandler() mqtt.MessageHandler {
 	return func(client mqtt.Client, msg mqtt.Message) {
-		decoded, err := s.params.Decoder.Decode(msg.Payload())
+		var data map[string]any
+		err := json.Unmarshal(msg.Payload(), &data)
 		if err != nil {
-			fmt.Printf("error decoding message: %v\n", err)
+			log.Errorf("error decoding message: %s", err)
 			return
 		}
 
-		fmt.Printf("Received message: %s from topic: %s\n", decoded, msg.Topic())
+		i.events <- data
+		log.Infof("Received message: %s from topic: %s\n", msg.Payload(), msg.Topic())
 	}
 }
 
 var defaultPubHandler mqtt.MessageHandler = func(client mqtt.Client, msg mqtt.Message) {
-	fmt.Printf("Received message: %s from topic: %s\n", msg.Payload(), msg.Topic())
+	log.Infof("Received message: %s from topic: %s\n", msg.Payload(), msg.Topic())
 }
 
 var connectHandler mqtt.OnConnectHandler = func(client mqtt.Client) {
-	fmt.Println("Connected")
+	log.Info("Connected to mqtt broker")
 }
 
 var connectLostHandler mqtt.ConnectionLostHandler = func(client mqtt.Client, err error) {
-	fmt.Printf("Connection lost: %v\n", err)
+	log.Warningf("Connection lost: %v", err)
 }

@@ -1,12 +1,12 @@
 package config
 
 type Auth struct {
-	Type    string  `yaml:"type" validate:"required"`
-	Secret  string  `yaml:"secret" validate:"required"`
-	Encoder Encoder `yaml:"encoder" validate:"required,dive,required"`
+	Type    string  `yaml:"type"`
+	Secret  string  `yaml:"secret"`
+	Encoder Encoder `yaml:"encoder"`
 }
 
 type Encoder struct {
-	Type   string  `yaml:"type" validate:"required"`
-	Fields []Field `yaml:"fields" validate:"required,dive,required"`
+	Type   string  `yaml:"type"`
+	Fields []Field `yaml:"fields"`
 }

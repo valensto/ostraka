@@ -1,44 +1,57 @@
 package webhook
 
 import (
-	"encoding/json"
-	"fmt"
 	"github.com/go-chi/chi/v5"
+	log "github.com/sirupsen/logrus"
 	"github.com/valensto/ostraka/internal/config"
+	"io"
 	"net/http"
 )
 
 type Input struct {
-	params  config.WebhookParams
-	handler http.Handler
+	router *chi.Mux
+	config.Input
+	params config.WebhookParams
+	events chan<- map[string]any
 }
 
-func New(params config.WebhookParams, router *chi.Mux) error {
-	i := Input{
-		params: params,
+func New(input config.Input, router *chi.Mux, events chan<- map[string]any) (*Input, error) {
+	params, err := input.ToWebhookParams()
+	if err != nil {
+		return nil, err
 	}
 
-	router.Post(params.Endpoint, i.Endpoint())
+	return &Input{
+		router: router,
+		Input:  input,
+		params: params,
+		events: events,
+	}, nil
+}
+
+func (i *Input) Subscribe() error {
+	i.router.Post(i.params.Endpoint, i.endpoint())
+
+	log.Infof("new webhook input: %s registered with endpoint %s", i.Name, i.params.Endpoint)
 	return nil
 }
 
-func (i *Input) Endpoint() http.HandlerFunc {
+func (i *Input) endpoint() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if err := i.Decode(w, r, &config.Decoder{}); err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+		bytes, err := io.ReadAll(r.Body)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
-	}
-}
 
-func (i *Input) Decode(_ http.ResponseWriter, r *http.Request, v interface{}) error {
-	if r.ContentLength == 0 {
-		return nil
-	}
+		decoded, err := i.Decoder.Decode(bytes)
+		if err != nil {
+			log.Errorf("error decoding webhook input: %s", err)
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
 
-	if err := json.NewDecoder(r.Body).Decode(v); err != nil {
-		return fmt.Errorf("error decoding request body: %w", err)
+		i.events <- decoded
+		w.WriteHeader(http.StatusOK)
 	}
-
-	return nil
 }

@@ -5,8 +5,10 @@ import (
 	"github.com/go-playground/validator/v10"
 	"gopkg.in/yaml.v3"
 	"io/ioutil"
+	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 )
 
 var validate = validator.New()
@@ -26,25 +28,33 @@ type Field struct {
 }
 
 func LoadConfig() (Config, error) {
-	directory := "resources"
-
-	files, err := ioutil.ReadDir(directory)
-	if err != nil {
-		return nil, fmt.Errorf("error reading directory: %w", err)
-	}
+	directory := "internal/config/resources"
 
 	var config []File
-	for _, f := range files {
-		if !f.IsDir() && filepath.Ext(f.Name()) == ".yaml" {
-			filePath := filepath.Join(directory, f.Name())
+	err := filepath.Walk(directory, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if !info.IsDir() && (strings.HasSuffix(info.Name(), ".yaml") || strings.HasSuffix(info.Name(), ".yml")) {
+			filePath := filepath.Join(directory, info.Name())
 
 			parsedFile, err := parseFile(filePath)
 			if err != nil {
-				return nil, fmt.Errorf("error parsing f: %w", err)
+				return fmt.Errorf("error parsing f: %w", err)
 			}
 
 			config = append(config, *parsedFile)
 		}
+
+		return nil
+	})
+	if err != nil {
+		fmt.Println("Error reading directory:", err)
+	}
+
+	if len(config) == 0 {
+		return nil, fmt.Errorf("no config files found in %s", directory)
 	}
 
 	return config, nil

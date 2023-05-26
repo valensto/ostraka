@@ -16,59 +16,6 @@ func Test_parseFile(t *testing.T) {
 			name: "should parse file without error",
 			path: "__test__/valid.yaml",
 			want: &File{
-				Inputs: []Input{
-					{
-						Name: "webhook-orders",
-						Type: "webhook",
-						Params: WebhookParams{
-							Endpoint: "/webhook/orders",
-							Decoder: Decoder{
-								Type: "json",
-								Mappers: []Mapper{
-									{
-										Source: "o_customer_id",
-										Target: "customerId",
-									},
-									{
-										Source: "o_number",
-										Target: "orderNumber",
-									},
-									{
-										Source: "o_status",
-										Target: "orderStatus",
-									},
-								},
-							},
-						},
-					},
-					{
-						Name: "mqtt-orders",
-						Type: "mqtt",
-						Params: MQTTParams{
-							Broker:   "mqtt.example.com",
-							User:     "my-user",
-							Password: "my-password",
-							Topic:    "my-topic",
-							Decoder: Decoder{
-								Type: "json",
-								Mappers: []Mapper{
-									{
-										Source: "customer_id",
-										Target: "customerId",
-									},
-									{
-										Source: "number",
-										Target: "orderNumber",
-									},
-									{
-										Source: "status",
-										Target: "orderStatus",
-									},
-								},
-							},
-						},
-					},
-				},
 				Event: Event{
 					Type: "json",
 					Fields: []Field{
@@ -91,6 +38,59 @@ func Test_parseFile(t *testing.T) {
 							Name:     "nonRequiredField",
 							Type:     "string",
 							Required: false,
+						},
+					},
+				},
+				Inputs: []Input{
+					{
+						Name: "webhook-orders",
+						Type: "webhook",
+						Params: WebhookParams{
+							Endpoint: "/webhook/orders",
+						},
+						Decoder: Decoder{
+							Type: "json",
+							Mappers: []Mapper{
+								{
+									Source: "o_customer_id",
+									Target: "customerId",
+								},
+								{
+									Source: "o_number",
+									Target: "orderNumber",
+								},
+								{
+									Source: "o_status",
+									Target: "orderStatus",
+								},
+							},
+						},
+					},
+					{
+						Name: "mqtt-orders",
+						Type: "mqtt",
+						Params: MQTTParams{
+							Broker:   "mqtt.example.com",
+							User:     "my-user",
+							Password: "my-password",
+							Topic:    "my-topic",
+						},
+						Decoder: Decoder{
+							Type: "json",
+							Mappers: []Mapper{
+								{
+									Source: "customer_id",
+									Target: "customerId",
+								},
+								{
+									Source: "number",
+									Target: "orderNumber",
+								},
+								{
+									Source: "status",
+									Target: "orderStatus",
+								},
+							},
 						},
 					},
 				},
@@ -153,7 +153,13 @@ func Test_parseFile(t *testing.T) {
 
 			require.NoError(t, err)
 			require.Equal(t, tt.want.Event, got.Event)
-			require.Equal(t, tt.want.Inputs, got.Inputs)
+
+			for i, _ := range tt.want.Inputs {
+				require.Equal(t, tt.want.Inputs[i].Name, got.Inputs[i].Name)
+				require.Equal(t, tt.want.Inputs[i].Type, got.Inputs[i].Type)
+				require.Equal(t, tt.want.Inputs[i].Params, got.Inputs[i].Params)
+				require.Equal(t, tt.want.Inputs[i].Decoder.Mappers, got.Inputs[i].Decoder.Mappers)
+			}
 
 			for i, _ := range tt.want.Outputs {
 				require.Equal(t, tt.want.Outputs[i].Name, got.Outputs[i].Name)

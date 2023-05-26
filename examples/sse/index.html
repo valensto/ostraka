@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>SSE subscription</title>
+    <meta charset="utf-8">
+    <style>
+        .title {
+            font-weight: bold;
+            font-size: 1.2em;
+        }
+
+        .status {
+            font-weight: bold;
+            font-size: 1.2em;
+            color: white;
+            padding: 0.2em 0.5em;
+        }
+
+        .completed {
+            background-color: green;
+        }
+
+        .pending {
+            background-color: orange;
+        }
+
+        .failed {
+            background-color: red;
+        }
+    </style>
+</head>
+<body>
+<h1>SSE subscription</h1>
+<div>
+    <ul id="sse-data">
+
+    </ul>
+</div>
+
+<script>
+    const endpoint = "http://localhost:4000/sse/orders"
+    const eventSource = new EventSource(endpoint);
+
+    eventSource.addEventListener('message', (event) => {
+        const eventData = JSON.parse(event.data);
+        console.log(eventData)
+        const sseDataElement = document.getElementById('sse-data');
+        sseDataElement.innerHTML += `<li>
+            <p class="title">Order n°${eventData.orderNumber}</p>
+            <p>Order status: <span class="status ${eventData.orderStatus}">${eventData.orderStatus}</span></p>
+        </li>`;
+    });
+
+    eventSource.addEventListener('error', (error) => {
+        console.log('SSE error', error)
+    });
+</script>
+</body>
+</html>
