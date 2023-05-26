@@ -36,7 +36,19 @@ Place the YAML configuration file in the config directory `config/resources`.
 Run the Ostraka microservice using Docker:
     
 ```shell
-make all
+make dev
+```
+
+To run test
+
+```shell
+make test
+```
+
+To run sse example
+
+```shell
+make sse-example
 ```
 
 Ostraka will start and load the configuration from the YAML file.
@@ -50,38 +62,6 @@ Ostraka uses YAML files for configuration. You can define the inputs and outputs
 Example YAML configuration:
 
 ```yaml
-inputs:
-  - name: webhook-orders
-    type: webhook
-    params:
-      endpoint: /webhook/orders
-      decoder:
-        type: json
-        mappers:
-          - source: o_customer_id
-            target: customerId
-          - source: o_number
-            target: orderNumber
-          - source: o_status
-            target: orderStatus
-
-  - name: mqtt-orders
-    type: mqtt
-    params:
-      broker: mqtt.example.com
-      user: my-user
-      password: my-password
-      topic: my-topic
-      decoder:
-        type: json
-        mappers:
-          - source: customer_id
-            target: customerId
-          - source: number
-            target: orderNumber
-          - source: status
-            target: orderStatus
-
 event:
   type: json
   fields:
@@ -96,7 +76,39 @@ event:
       required: true
     - name: nonRequiredField
       type: string
+      
+inputs:
+  - name: webhook-orders
+    type: webhook
+    decoder:
+      type: json
+      mappers:
+        - source: o_customer_id
+          target: customerId
+        - source: o_number
+          target: orderNumber
+        - source: o_status
+          target: orderStatus
+    params:
+      endpoint: /webhook/orders
 
+  - name: mqtt-orders
+    type: mqtt
+    decoder:
+      type: json
+      mappers:
+        - source: customer_id
+          target: customerId
+        - source: number
+          target: orderNumber
+        - source: status
+          target: orderStatus
+    params:
+      broker: mqtt.example.com
+      user: my-user
+      password: my-password
+      topic: my-topic
+      
 outputs:
   - name: sse-orders
     type: sse
