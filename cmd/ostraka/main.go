@@ -1,11 +1,12 @@
 package main
 
 import (
-	"github.com/go-chi/chi/v5"
 	"github.com/valensto/ostraka/internal/config"
 	"github.com/valensto/ostraka/internal/dispatcher"
 	"log"
-	"net/http"
+	"os"
+	"os/exec"
+	"time"
 )
 
 func main() {
@@ -15,17 +16,32 @@ func main() {
 }
 
 func run() error {
+	port := "4000"
+	banner(port)
 	conf, err := config.LoadConfig()
 	if err != nil {
 		return err
 	}
 
-	router := chi.NewRouter()
+	return dispatcher.Dispatch(conf, port)
+}
 
-	err = dispatcher.Dispatch(conf, router)
-	if err != nil {
-		return err
-	}
+func banner(port string) {
+	b := `
+ ██████╗ ███████╗████████╗██████╗  █████╗ ██╗  ██╗ █████╗ 
+██╔═══██╗██╔════╝╚══██╔══╝██╔══██╗██╔══██╗██║ ██╔╝██╔══██╗
+██║   ██║███████╗   ██║   ██████╔╝███████║█████╔╝ ███████║
+██║   ██║╚════██║   ██║   ██╔══██╗██╔══██║██╔═██╗ ██╔══██║
+╚██████╔╝███████║   ██║   ██║  ██║██║  ██║██║  ██╗██║  ██║
+ ╚═════╝ ╚══════╝   ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝
+https://github.com/valensto/ostraka - %v ©
+App running on port - %v
 
-	return http.ListenAndServe(":4000", router)
+`
+	t := time.Now()
+	y := t.Year()
+	c := exec.Command("clear")
+	c.Stdout = os.Stdout
+	_ = c.Run()
+	log.Printf(b, y, port)
 }

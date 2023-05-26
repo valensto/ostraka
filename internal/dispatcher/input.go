@@ -7,7 +7,7 @@ import (
 	"github.com/valensto/ostraka/internal/input/webhook"
 )
 
-func (f file) proceedInputs() error {
+func (f file) subscribeInputs() error {
 	for _, i := range f.config.Inputs {
 		switch i.Type {
 		case config.Webhook:

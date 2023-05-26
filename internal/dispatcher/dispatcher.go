@@ -3,8 +3,9 @@ package dispatcher
 import (
 	"encoding/json"
 	"github.com/go-chi/chi/v5"
+	log "github.com/sirupsen/logrus"
 	"github.com/valensto/ostraka/internal/config"
-	"log"
+	"net/http"
 )
 
 type file struct {
@@ -23,24 +24,26 @@ func newFile(conf config.File, router *chi.Mux) *file {
 	}
 }
 
-func Dispatch(conf config.Config, router *chi.Mux) error {
+func Dispatch(conf config.Config, port string) error {
+	router := chi.NewRouter()
+
 	for _, file := range conf {
 		f := newFile(file, router)
 
 		go f.dispatchEvents()
 
-		err := f.proceedInputs()
+		err := f.subscribeInputs()
 		if err != nil {
 			return err
 		}
 
-		err = f.proceedOutputs()
+		err = f.registerOutputs()
 		if err != nil {
 			return err
 		}
 	}
 
-	return nil
+	return http.ListenAndServe(":"+port, router)
 }
 
 func (f file) dispatchEvents() {
@@ -49,10 +52,11 @@ func (f file) dispatchEvents() {
 		case event := <-f.inputEvents:
 			data, err := json.Marshal(event)
 			if err != nil {
-				log.Printf("error marshaling event: %v", err)
+				log.Warnf("error marshaling event: %v", err)
 				continue
 			}
 
+			log.Infof("event dispatched: %s", data)
 			f.outputEvents <- data
 		}
 	}

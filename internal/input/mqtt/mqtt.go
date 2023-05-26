@@ -5,8 +5,8 @@ import (
 	"fmt"
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/google/uuid"
+	log "github.com/sirupsen/logrus"
 	"github.com/valensto/ostraka/internal/config"
-	"log"
 )
 
 type Input struct {
@@ -52,7 +52,7 @@ func (i *Input) Subscribe() error {
 		return fmt.Errorf("error subscribing to topic: %s", i.params.Topic)
 	}
 
-	log.Printf("new mqtt input: %s registered", i.params.Topic)
+	log.Infof("new mqtt input: %s registered", i.params.Topic)
 	return nil
 }
 
@@ -61,23 +61,23 @@ func (i *Input) eventPubHandler() mqtt.MessageHandler {
 		var data map[string]any
 		err := json.Unmarshal(msg.Payload(), &data)
 		if err != nil {
-			log.Printf("error decoding message: %s", err)
+			log.Errorf("error decoding message: %s", err)
 			return
 		}
 
 		i.events <- data
-		fmt.Printf("Received message: %v from topic: %s\n", data, msg.Topic())
+		log.Infof("Received message: %s from topic: %s\n", msg.Payload(), msg.Topic())
 	}
 }
 
 var defaultPubHandler mqtt.MessageHandler = func(client mqtt.Client, msg mqtt.Message) {
-	fmt.Printf("Received message: %s from topic: %s\n", msg.Payload(), msg.Topic())
+	log.Infof("Received message: %s from topic: %s\n", msg.Payload(), msg.Topic())
 }
 
 var connectHandler mqtt.OnConnectHandler = func(client mqtt.Client) {
-	fmt.Println("Connected")
+	log.Info("Connected to mqtt broker")
 }
 
 var connectLostHandler mqtt.ConnectionLostHandler = func(client mqtt.Client, err error) {
-	fmt.Printf("Connection lost: %v\n", err)
+	log.Warningf("Connection lost: %v", err)
 }

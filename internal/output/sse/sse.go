@@ -4,12 +4,12 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/go-chi/chi/v5"
+	log "github.com/sirupsen/logrus"
 	"github.com/valensto/ostraka/internal/config"
-	"log"
 	"net/http"
 )
 
-type output struct {
+type sse struct {
 	router        *chi.Mux
 	params        config.SSEParams
 	clients       map[client]bool
@@ -21,8 +21,13 @@ type output struct {
 
 type client chan []byte
 
-func Register(params config.SSEParams, router *chi.Mux, events <-chan []byte) error {
-	output := output{
+func Register(output config.Output, router *chi.Mux, events <-chan []byte) error {
+	params, err := output.ToSSEParams()
+	if err != nil {
+		return err
+	}
+
+	sse := sse{
 		router:        router,
 		params:        params,
 		clients:       make(map[client]bool),
@@ -31,18 +36,19 @@ func Register(params config.SSEParams, router *chi.Mux, events <-chan []byte) er
 		bufSize:       2,
 		eventCounter:  0,
 	}
-	
-	output.listen(events)
-	output.router.Get(params.Endpoint, output.endpoint())
 
-	log.Printf("new sse output: %s registered", params.Endpoint)
+	sse.listen(events)
+	sse.router.Get(params.Endpoint, sse.endpoint())
+
+	log.Infof("new sse output: %s registered on endpoint %s", output.Name, params.Endpoint)
 	return nil
 }
 
-func (s output) endpoint() http.HandlerFunc {
+func (s sse) endpoint() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		fl, ok := w.(http.Flusher)
 		if !ok {
+			log.Errorf("error flushing response writer: %s", fmt.Errorf("flushing not supported"))
 			http.Error(w, "Flushing not supported", http.StatusNotImplemented)
 			return
 		}
@@ -73,7 +79,7 @@ func (s output) endpoint() http.HandlerFunc {
 	}
 }
 
-func (s output) listen(events <-chan []byte) {
+func (s sse) listen(events <-chan []byte) {
 	go func() {
 		for {
 			select {

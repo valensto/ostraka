@@ -2,9 +2,9 @@ package webhook
 
 import (
 	"github.com/go-chi/chi/v5"
+	log "github.com/sirupsen/logrus"
 	"github.com/valensto/ostraka/internal/config"
 	"io"
-	"log"
 	"net/http"
 )
 
@@ -32,7 +32,7 @@ func New(input config.Input, router *chi.Mux, events chan<- map[string]any) (*In
 func (i *Input) Subscribe() error {
 	i.router.Post(i.params.Endpoint, i.endpoint())
 
-	log.Printf("new webhook input: %s registered with endpoint %s", i.Name, i.params.Endpoint)
+	log.Infof("new webhook input: %s registered with endpoint %s", i.Name, i.params.Endpoint)
 	return nil
 }
 
@@ -46,7 +46,7 @@ func (i *Input) endpoint() http.HandlerFunc {
 
 		decoded, err := i.Decoder.Decode(bytes)
 		if err != nil {
-			log.Printf("error decoding webhook input: %s", err)
+			log.Errorf("error decoding webhook input: %s", err)
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
