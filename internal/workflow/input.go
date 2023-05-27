@@ -3,6 +3,7 @@ package workflow
 import (
 	"encoding/json"
 	"fmt"
+
 	"gopkg.in/yaml.v3"
 )
 
@@ -10,6 +11,29 @@ const (
 	Webhook = "webhook"
 	MQTT    = "mqtt"
 )
+
+type InputEvent map[string]any
+
+func (i InputEvent) MarshalJSON() ([]byte, error) {
+
+	b, err := json.Marshal(i)
+	if err != nil {
+		return nil, err
+	}
+
+	in := json.RawMessage(b)
+	return in.MarshalJSON()
+}
+
+func (i *InputEvent) UnmarshalJSON(b []byte) error {
+	var in json.RawMessage
+	err := in.UnmarshalJSON(b)
+	if err != nil {
+		return err
+	}
+
+	return json.Unmarshal(in, i)
+}
 
 type Input struct {
 	Name    string      `yaml:"name" validate:"required"`

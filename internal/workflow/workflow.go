@@ -8,8 +8,9 @@ import (
 	"reflect"
 
 	"github.com/go-playground/validator/v10"
-	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
+
+	"github.com/valensto/ostraka/logger"
 )
 
 type Workflows []Workflow
@@ -42,7 +43,7 @@ func Build() (Workflows, error) {
 	for _, file := range dir {
 		ext := filepath.Ext(file.Name())
 		if ext != ".yaml" && ext != ".yml" {
-			log.Warningf(`unable to find .yaml or .yml file. "%s" will be skipped`, file.Name())
+			logger.Get().Warn().Msgf(`unable to find .yaml or .yml file. '%s' will be skipped`, file.Name())
 			continue
 		}
 
