@@ -5,6 +5,10 @@ NETWORKS="$(shell docker network ls)"
 VOLUMES="$(shell docker volume ls)"
 SUCCESS=[ done "\xE2\x9C\x94" ]
 
+local:
+	@echo [ starting ostraka... ]
+	go run ./cmd/ostraka/main.go
+
 .PHONY: dev
 dev: down
 	@echo [ starting ostraka... ]

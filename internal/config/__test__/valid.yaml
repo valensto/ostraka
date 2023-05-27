@@ -35,6 +35,8 @@ inputs:
       user: my-user
       password: my-password
       topic: my-topic
+      autoreconnect: true
+      keepalive: true
     decoder:
       type: json
       mappers:

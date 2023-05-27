@@ -72,10 +72,12 @@ func Test_parseFile(t *testing.T) {
 						Name: "mqtt-orders",
 						Type: "mqtt",
 						Params: MQTTParams{
-							Broker:   "mqtt.example.com",
-							User:     "my-user",
-							Password: "my-password",
-							Topic:    "my-topic",
+							Broker:        "mqtt.example.com",
+							User:          "my-user",
+							Password:      "my-password",
+							Topic:         "my-topic",
+							AutoReconnect: true,
+							KeepAlive:     true,
 						},
 						Decoder: Decoder{
 							Type: "json",
@@ -151,7 +153,7 @@ func Test_parseFile(t *testing.T) {
 			require.NoError(t, err)
 			defer f.Close()
 
-			got, err := parseFile(f)
+			got, err := readConfig(f)
 			if tt.fails {
 				require.Error(t, err)
 				return

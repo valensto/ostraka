@@ -35,10 +35,12 @@ type WebhookParams struct {
 }
 
 type MQTTParams struct {
-	Broker   string `yaml:"broker" validate:"required"`
-	User     string `yaml:"user" validate:"required"`
-	Password string `yaml:"password" validate:"required"`
-	Topic    string `yaml:"topic" validate:"required"`
+	Broker        string `yaml:"broker" validate:"required"`
+	User          string `yaml:"user" validate:"required"`
+	Password      string `yaml:"password" validate:"required"`
+	Topic         string `yaml:"topic" validate:"required"`
+	AutoReconnect bool   `yaml:"autoreconnect" validate:"required"`
+	KeepAlive     bool   `yaml:"keepalive" validate:"required"`
 }
 
 func (file *Workflow) setInputs() error {

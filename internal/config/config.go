@@ -39,7 +39,7 @@ func NewWorkflow() (Workflows, error) {
 	for _, file := range dir {
 		ext := filepath.Ext(file.Name())
 		if ext != ".yaml" && ext != ".yml" {
-			log.Warningf("unable to find .yaml or .yml file. %s will be skipped", file.Name())
+			log.Warningf(`unable to find .yaml or .yml file. "%s" will be skipped`, file.Name())
 			continue
 		}
 
@@ -49,7 +49,7 @@ func NewWorkflow() (Workflows, error) {
 		}
 		defer f.Close()
 
-		workflow, err := parseFile(f)
+		workflow, err := readConfig(f)
 		if err != nil {
 			return nil, fmt.Errorf("error parsing f: %w", err)
 		}
@@ -60,7 +60,7 @@ func NewWorkflow() (Workflows, error) {
 	return workflows, nil
 }
 
-func parseFile(r io.Reader) (*Workflow, error) {
+func readConfig(r io.Reader) (*Workflow, error) {
 	b, err := io.ReadAll(r)
 	if err != nil {
 		return nil, fmt.Errorf("error reading ostrakaflow file: %w", err)
