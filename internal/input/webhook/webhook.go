@@ -1,11 +1,12 @@
 package webhook
 
 import (
+	"io"
+	"net/http"
+
 	"github.com/go-chi/chi/v5"
 	log "github.com/sirupsen/logrus"
 	"github.com/valensto/ostraka/internal/config"
-	"io"
-	"net/http"
 )
 
 type Input struct {
@@ -16,7 +17,7 @@ type Input struct {
 }
 
 func New(input config.Input, router *chi.Mux, events chan<- map[string]any) (*Input, error) {
-	params, err := input.ToWebhookParams()
+	params, err := input.GetAsWebhookParams()
 	if err != nil {
 		return nil, err
 	}

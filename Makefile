@@ -25,9 +25,8 @@ down:
 	@echo $(SUCCESS)
 
 .PHONY: sse-example
-sse-example: down
+sse-example:
 	@echo [ starting sse-example... ]
-	@cp ./examples/sse/sse_order.yaml ./internal/config/resources/
 	@docker compose up -d
 	@sh ./scripts/check_uri.sh POST http://localhost:4000/webhook/orders
 	@sh ./examples/sse/events.sh

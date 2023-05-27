@@ -1,0 +1,35 @@
+event:
+  type: json
+  fields:
+    - name: customerId
+      type: string
+      required: true
+    - name: orderNumber
+      type: int
+      required: true
+    - name: orderStatus
+      type: string
+      required: true
+    - name: nonRequiredField
+      type: string
+
+inputs:
+  - name: webhook-orders
+    type: webhook
+    params:
+      endpoint: /webhook/orders
+    decoder:
+      type: json
+      mappers:
+        - source: o_customer_id
+          target: customerId
+        - source: o_number
+          target: orderNumber
+        - source: o_status
+          target: orderStatus
+
+outputs:
+  - name: sse-orders
+    type: sse
+    params:
+      endpoint: /sse/orders

@@ -1,21 +1,23 @@
 package config
 
 import (
-	"github.com/stretchr/testify/require"
+	"os"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 func Test_parseFile(t *testing.T) {
 	tests := []struct {
-		name          string
-		path          string
-		want          *File
-		expectedError error
+		name  string
+		path  string
+		want  *Workflow
+		fails bool
 	}{
 		{
 			name: "should parse file without error",
 			path: "__test__/valid.yaml",
-			want: &File{
+			want: &Workflow{
 				Event: Event{
 					Type: "json",
 					Fields: []Field{
@@ -140,14 +142,18 @@ func Test_parseFile(t *testing.T) {
 					},
 				},
 			},
-			expectedError: nil,
+			fails: false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := parseFile(tt.path)
-			if tt.expectedError != nil {
-				require.ErrorIs(t, err, tt.expectedError)
+			f, err := os.Open(tt.path)
+			require.NoError(t, err)
+			defer f.Close()
+
+			got, err := parseFile(f)
+			if tt.fails {
+				require.Error(t, err)
 				return
 			}
 

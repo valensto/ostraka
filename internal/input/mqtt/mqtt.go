@@ -3,20 +3,21 @@ package mqtt
 import (
 	"encoding/json"
 	"fmt"
+
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
 	"github.com/valensto/ostraka/internal/config"
 )
 
-type Input struct {
+type Client struct {
 	client mqtt.Client
 	params config.MQTTParams
 	events chan<- map[string]any
 }
 
-func New(input config.Input, events chan<- map[string]any) (*Input, error) {
-	params, err := input.ToMQTTParams()
+func New(input config.Input, events chan<- map[string]any) (*Client, error) {
+	params, err := input.GetAsMQTTParams()
 	if err != nil {
 		return nil, err
 	}
@@ -37,14 +38,14 @@ func New(input config.Input, events chan<- map[string]any) (*Input, error) {
 		return nil, fmt.Errorf("error connecting to mqtt broker: %w", token.Error())
 	}
 
-	return &Input{
+	return &Client{
 		params: params,
 		events: events,
 		client: client,
 	}, nil
 }
 
-func (i *Input) Subscribe() error {
+func (i *Client) Subscribe() error {
 	token := i.client.Subscribe(i.params.Topic, 1, i.eventPubHandler())
 	token.Wait()
 
@@ -56,7 +57,7 @@ func (i *Input) Subscribe() error {
 	return nil
 }
 
-func (i *Input) eventPubHandler() mqtt.MessageHandler {
+func (i *Client) eventPubHandler() mqtt.MessageHandler {
 	return func(client mqtt.Client, msg mqtt.Message) {
 		var data map[string]any
 		err := json.Unmarshal(msg.Payload(), &data)

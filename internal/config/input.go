@@ -3,6 +3,7 @@ package config
 import (
 	"encoding/json"
 	"fmt"
+
 	"gopkg.in/yaml.v3"
 )
 
@@ -40,7 +41,7 @@ type MQTTParams struct {
 	Topic    string `yaml:"topic" validate:"required"`
 }
 
-func (file *File) populateInputs() error {
+func (file *Workflow) setInputs() error {
 	var parsedInputs []Input
 
 	for _, input := range file.Inputs {
@@ -78,7 +79,7 @@ func (file *File) populateInputs() error {
 	return nil
 }
 
-func (i Input) ToWebhookParams() (WebhookParams, error) {
+func (i Input) GetAsWebhookParams() (WebhookParams, error) {
 	params, ok := i.Params.(WebhookParams)
 	if !ok {
 		return WebhookParams{}, fmt.Errorf("input params are not of type WebhookParams")
@@ -87,7 +88,7 @@ func (i Input) ToWebhookParams() (WebhookParams, error) {
 	return params, nil
 }
 
-func (i Input) ToMQTTParams() (MQTTParams, error) {
+func (i Input) GetAsMQTTParams() (MQTTParams, error) {
 	params, ok := i.Params.(MQTTParams)
 	if !ok {
 		return MQTTParams{}, fmt.Errorf("input params are not of type MQTTParams")
