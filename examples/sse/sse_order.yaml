@@ -29,7 +29,11 @@ inputs:
           target: orderStatus
 
 outputs:
-  - name: sse-orders
+  - name: sse-orders-completed
     type: sse
     params:
-      endpoint: /sse/orders
+      endpoint: /sse/orders/completed
+  - name: sse-orders-failed
+    type: sse
+    params:
+      endpoint: /sse/orders/failed
