@@ -2,18 +2,12 @@ package workflow
 
 import (
 	"fmt"
-
 	"gopkg.in/yaml.v3"
 )
 
 const (
 	SSE = "sse"
 )
-
-type Event struct {
-	Type   string  `yaml:"type" validate:"required"`
-	Fields []Field `yaml:"fields" validate:"required,dive,required"`
-}
 
 type Output struct {
 	Name       string      `yaml:"name" validate:"required"`
@@ -28,17 +22,16 @@ type SSEParams struct {
 }
 
 type Condition struct {
-	Conditions []Condition `yaml:"conditions"`
-	Source     string      `yaml:"source" validate:"required"`
-	Field      string      `yaml:"field" validate:"required"`
-	Operator   string      `yaml:"operator" validate:"required"`
-	Value      string      `yaml:"value" validate:"required"`
+	Source   string `yaml:"source" validate:"required"`
+	Field    string `yaml:"field" validate:"required"`
+	Operator string `yaml:"operator" validate:"required"`
+	Value    string `yaml:"value" validate:"required"`
 }
 
-func (file *Workflow) populateOutputs() error {
+func (wf *Workflow) setOutputs() error {
 	var parsedOutputs []Output
 
-	for _, output := range file.Outputs {
+	for _, output := range wf.Outputs {
 		marshalled, err := yaml.Marshal(output.Params)
 		if err != nil {
 			return fmt.Errorf("error marshalling output params: %w", err)
@@ -60,7 +53,7 @@ func (file *Workflow) populateOutputs() error {
 		parsedOutputs = append(parsedOutputs, output)
 	}
 
-	file.Outputs = parsedOutputs
+	wf.Outputs = parsedOutputs
 	return nil
 }
 

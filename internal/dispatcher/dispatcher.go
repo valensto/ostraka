@@ -10,26 +10,26 @@ import (
 )
 
 type file struct {
-	config       workflow.Workflow
+	workflow     workflow.Workflow
 	router       *chi.Mux
 	inputEvents  chan map[string]any
 	outputEvents chan []byte
 }
 
-func newFile(conf workflow.Workflow, router *chi.Mux) *file {
+func newFile(wf workflow.Workflow, router *chi.Mux) *file {
 	return &file{
-		config:       conf,
+		workflow:     wf,
 		router:       router,
-		inputEvents:  make(chan map[string]any, len(conf.Inputs)),
-		outputEvents: make(chan []byte, len(conf.Outputs)),
+		inputEvents:  make(chan map[string]any, len(wf.Inputs)),
+		outputEvents: make(chan []byte, len(wf.Outputs)),
 	}
 }
 
 func Dispatch(workflows workflow.Workflows, port string) error {
 	router := chi.NewRouter()
 
-	for _, workflow := range workflows {
-		f := newFile(workflow, router)
+	for _, wf := range workflows {
+		f := newFile(wf, router)
 
 		go f.dispatchEvents()
 

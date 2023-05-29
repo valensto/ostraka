@@ -15,6 +15,7 @@ type Client struct {
 	client    mqtt.Client
 	connected chan bool
 	params    workflow.MQTTParams
+	inputName string
 	events    chan<- map[string]any
 }
 
@@ -41,6 +42,7 @@ func New(input workflow.Input, events chan<- map[string]any) (*Client, error) {
 	}
 
 	c := &Client{
+		inputName: input.Name,
 		params:    params,
 		events:    events,
 		client:    client,
@@ -69,9 +71,9 @@ func (c *Client) keepalive() {
 				continue
 			}
 
-			log.Printf("[mqtt] send mqtt keep-alive")
+			log.Infof("%s send mqtt keep-alive", c.inputName)
 			if token := c.client.Publish("ping_topic", 0, false, "ping"); token.Wait() && token.Error() != nil {
-				log.Printf("[mqtt] mqtt keep-alive failed: %s", token.Error())
+				log.Warningf("%s mqtt keep-alive failed: %s", c.inputName, token.Error())
 			}
 			break
 		}
@@ -87,7 +89,7 @@ func (c *Client) Subscribe() error {
 		return fmt.Errorf("error subscribing to topic: %s", c.params.Topic)
 	}
 
-	log.Infof("new mqtt input: %s registered", c.params.Topic)
+	log.Infof("input %s of type MQTT registered. Listening from topic %s", c.inputName, c.params.Topic)
 	return nil
 }
 
@@ -122,7 +124,6 @@ func (c *Client) Disconnect() {
 	close(c.connected)
 }
 
-// Connect the mqtt client to the broker
 func (c *Client) Connect() error {
 	if c.client.IsConnected() {
 		return nil
