@@ -144,14 +144,14 @@ func Test_parseFile(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, tt.want.Event, got.Event)
 
-			for i, _ := range tt.want.Inputs {
+			for i := range tt.want.Inputs {
 				require.Equal(t, tt.want.Inputs[i].Name, got.Inputs[i].Name)
 				require.Equal(t, tt.want.Inputs[i].Type, got.Inputs[i].Type)
 				require.Equal(t, tt.want.Inputs[i].Params, got.Inputs[i].Params)
 				require.Equal(t, tt.want.Inputs[i].Decoder.Mappers, got.Inputs[i].Decoder.Mappers)
 			}
 
-			for i, _ := range tt.want.Outputs {
+			for i := range tt.want.Outputs {
 				require.Equal(t, tt.want.Outputs[i].Name, got.Outputs[i].Name)
 				require.Equal(t, tt.want.Outputs[i].Type, got.Outputs[i].Type)
 				require.Equal(t, tt.want.Outputs[i].Params, got.Outputs[i].Params)
