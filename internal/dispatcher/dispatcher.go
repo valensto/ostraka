@@ -5,8 +5,9 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
-	log "github.com/sirupsen/logrus"
+
 	"github.com/valensto/ostraka/internal/workflow"
+	"github.com/valensto/ostraka/logger"
 )
 
 type dispatcher struct {
@@ -44,16 +45,17 @@ func Dispatch(workflows workflow.Workflows, port string) error {
 }
 
 func (d dispatcher) dispatchEvents() {
+	log := logger.Get()
 	for {
 		select {
 		case event := <-d.inputEvents:
 			data, err := json.Marshal(event)
 			if err != nil {
-				log.Warnf("error marshaling event: %v", err)
+				log.Warn().Msgf("error marshaling event: %s", err.Error())
 				continue
 			}
 
-			log.Infof("event dispatched: %s", data)
+			log.Info().Msgf("event dispatched: %s", string(data))
 			d.outputEvents <- data
 		}
 	}

@@ -6,8 +6,9 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
-	log "github.com/sirupsen/logrus"
+
 	"github.com/valensto/ostraka/internal/workflow"
+	"github.com/valensto/ostraka/logger"
 )
 
 type sse struct {
@@ -41,7 +42,7 @@ func Register(output workflow.Output, router *chi.Mux, events <-chan []byte) err
 	sse.listen(events)
 	sse.router.Get(params.Endpoint, sse.endpoint())
 
-	log.Infof("output %s of type SSE registered. Sending to endpoint %s", output.Name, params.Endpoint)
+	logger.Get().Info().Msgf("output %s of type SSE registered. Sending to endpoint %s", output.Name, params.Endpoint)
 	return nil
 }
 
@@ -49,12 +50,10 @@ func (s sse) endpoint() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		fl, ok := w.(http.Flusher)
 		if !ok {
-			log.Errorf("error flushing response writer: %s", fmt.Errorf("flushing not supported"))
+			logger.Get().Error().Msg("error flushing response writer: flushing not supported")
 			http.Error(w, "Flushing not supported", http.StatusNotImplemented)
 			return
 		}
-
-		done := r.Context().Done()
 
 		h := w.Header()
 		h.Set("Access-Control-Allow-Origin", "*")
@@ -66,9 +65,10 @@ func (s sse) endpoint() http.HandlerFunc {
 		cl := make(client, s.bufSize)
 		s.connecting <- cl
 
+		ctx := r.Context()
 		for {
 			select {
-			case <-done:
+			case <-ctx.Done():
 				s.disconnecting <- cl
 				return
 
@@ -91,7 +91,7 @@ func (s sse) listen(events <-chan []byte) {
 				delete(s.clients, cl)
 
 			case event := <-events:
-				msg := format(fmt.Sprintf("%v", s.eventCounter), "message", event)
+				msg := format(fmt.Sprintf("%d", s.eventCounter), "message", event)
 				s.eventCounter++
 				for cl := range s.clients {
 					cl <- msg.Bytes()

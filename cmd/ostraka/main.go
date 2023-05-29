@@ -1,23 +1,24 @@
 package main
 
 import (
-	"log"
 	"os"
 	"os/exec"
 	"time"
 
+	"github.com/rs/zerolog/log"
 	"github.com/valensto/ostraka/internal/dispatcher"
 	"github.com/valensto/ostraka/internal/workflow"
 )
 
 func main() {
-	if err := run("4000"); err != nil {
-		log.Fatal(err)
+	port := "4000"
+	banner(port)
+	if err := run(port); err != nil {
+		log.Fatal().Msg(err.Error())
 	}
 }
 
 func run(port string) error {
-	banner(port)
 	workflows, err := workflow.Build()
 	if err != nil {
 		return err

@@ -2,6 +2,7 @@ package dispatcher
 
 import (
 	"fmt"
+
 	"github.com/valensto/ostraka/internal/input/mqtt"
 	"github.com/valensto/ostraka/internal/input/webhook"
 	"github.com/valensto/ostraka/internal/workflow"

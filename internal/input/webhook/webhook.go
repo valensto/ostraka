@@ -5,7 +5,8 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
-	log "github.com/sirupsen/logrus"
+	"github.com/rs/zerolog/log"
+
 	"github.com/valensto/ostraka/internal/workflow"
 )
 
@@ -33,7 +34,7 @@ func New(input workflow.Input, router *chi.Mux, events chan<- map[string]any) (*
 func (i *Input) Subscribe() error {
 	i.router.Post(i.params.Endpoint, i.endpoint())
 
-	log.Infof("input %s of type webhook registered. Listening from endpoint %s", i.Name, i.params.Endpoint)
+	log.Info().Msgf("input %s of type webhook registered. Listening from endpoint %s", i.Name, i.params.Endpoint)
 	return nil
 }
 
@@ -47,7 +48,7 @@ func (i *Input) endpoint() http.HandlerFunc {
 
 		decoded, err := i.Decoder.Decode(bytes)
 		if err != nil {
-			log.Errorf("error decoding webhook input: %s", err)
+			log.Error().Msgf("error decoding webhook input: %s", err)
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}

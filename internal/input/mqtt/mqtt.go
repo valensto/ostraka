@@ -7,8 +7,9 @@ import (
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/google/uuid"
-	log "github.com/sirupsen/logrus"
+
 	"github.com/valensto/ostraka/internal/workflow"
+	"github.com/valensto/ostraka/logger"
 )
 
 type Client struct {
@@ -59,6 +60,7 @@ func New(input workflow.Input, events chan<- map[string]any) (*Client, error) {
 func (c *Client) keepalive() {
 	const period = 2 * time.Second
 	var up, closed bool
+	log := logger.Get()
 	for {
 		select {
 		case up, closed = <-c.connected:
@@ -71,9 +73,9 @@ func (c *Client) keepalive() {
 				continue
 			}
 
-			log.Infof("%s send mqtt keep-alive", c.inputName)
+			logger.Get().Info().Msgf("%s send mqtt keep-alive", c.inputName)
 			if token := c.client.Publish("ping_topic", 0, false, "ping"); token.Wait() && token.Error() != nil {
-				log.Warningf("%s mqtt keep-alive failed: %s", c.inputName, token.Error())
+				log.Warn().Msgf("%s mqtt keep-alive failed: %s", c.inputName, token.Error())
 			}
 			break
 		}
@@ -89,7 +91,7 @@ func (c *Client) Subscribe() error {
 		return fmt.Errorf("error subscribing to topic: %s", c.params.Topic)
 	}
 
-	log.Infof("input %s of type MQTT registered. Listening from topic %s", c.inputName, c.params.Topic)
+	logger.Get().Info().Msgf("input %s of type MQTT registered. Listening from topic %s", c.inputName, c.params.Topic)
 	return nil
 }
 
@@ -98,25 +100,25 @@ func (c *Client) eventPubHandler() mqtt.MessageHandler {
 		var data map[string]any
 		err := json.Unmarshal(msg.Payload(), &data)
 		if err != nil {
-			log.Errorf("error decoding message: %s", err)
+			logger.Get().Error().Msgf("error decoding message: %s", err)
 			return
 		}
 
 		c.events <- data
-		log.Infof("Received message: %s from topic: %s\n", msg.Payload(), msg.Topic())
+		logger.Get().Info().Msgf("Received message: %s from topic: %s", msg.Payload(), msg.Topic())
 	}
 }
 
 var defaultPubHandler mqtt.MessageHandler = func(client mqtt.Client, msg mqtt.Message) {
-	log.Infof("Received message: %s from topic: %s\n", msg.Payload(), msg.Topic())
+	logger.Get().Info().Msgf("Received message: %s from topic: %s\n", msg.Payload(), msg.Topic())
 }
 
 var connectHandler mqtt.OnConnectHandler = func(client mqtt.Client) {
-	log.Info("Connected to mqtt broker")
+	logger.Get().Info().Msg("Connected to mqtt broker")
 }
 
 var connectLostHandler mqtt.ConnectionLostHandler = func(client mqtt.Client, err error) {
-	log.Warningf("Connection lost: %v", err)
+	logger.Get().Warn().Msgf("Connection lost: %v", err)
 }
 
 func (c *Client) Disconnect() {
