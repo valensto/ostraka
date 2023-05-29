@@ -6,17 +6,17 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	log "github.com/sirupsen/logrus"
-	"github.com/valensto/ostraka/internal/config"
+	"github.com/valensto/ostraka/internal/workflow"
 )
 
 type file struct {
-	config       config.Workflow
+	config       workflow.Workflow
 	router       *chi.Mux
 	inputEvents  chan map[string]any
 	outputEvents chan []byte
 }
 
-func newFile(conf config.Workflow, router *chi.Mux) *file {
+func newFile(conf workflow.Workflow, router *chi.Mux) *file {
 	return &file{
 		config:       conf,
 		router:       router,
@@ -25,7 +25,7 @@ func newFile(conf config.Workflow, router *chi.Mux) *file {
 	}
 }
 
-func Dispatch(workflows config.Workflows, port string) error {
+func Dispatch(workflows workflow.Workflows, port string) error {
 	router := chi.NewRouter()
 
 	for _, workflow := range workflows {

@@ -1,4 +1,4 @@
-package config
+package workflow
 
 import (
 	"fmt"
@@ -11,8 +11,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 )
-
-var validate = validator.New()
 
 type Workflows []Workflow
 
@@ -43,51 +41,59 @@ func NewWorkflow() (Workflows, error) {
 			continue
 		}
 
-		f, err := os.Open(filepath.Join(directory, file.Name()))
+		wf, err := extractWorkflow(filepath.Join(directory, file.Name()))
 		if err != nil {
-			return nil, fmt.Errorf("error opening file %s: %w", file, err)
+			return nil, fmt.Errorf("error extracting workflow: %w", err)
 		}
-		defer f.Close()
-
-		workflow, err := readConfig(f)
-		if err != nil {
-			return nil, fmt.Errorf("error parsing f: %w", err)
-		}
-
-		workflows = append(workflows, *workflow)
+		workflows = append(workflows, wf)
 	}
 
 	return workflows, nil
 }
 
-func readConfig(r io.Reader) (*Workflow, error) {
+func extractWorkflow(fname string) (Workflow, error) {
+	f, err := os.Open(fname)
+	if err != nil {
+		return Workflow{}, fmt.Errorf("error opening file %s: %w", fname, err)
+	}
+	defer f.Close()
+
+	workflow, err := readConfig(f)
+	if err != nil {
+		return Workflow{}, fmt.Errorf("error parsing f: %w", err)
+	}
+
+	return workflow, nil
+}
+
+func readConfig(r io.Reader) (Workflow, error) {
 	b, err := io.ReadAll(r)
 	if err != nil {
-		return nil, fmt.Errorf("error reading ostrakaflow file: %w", err)
+		return Workflow{}, fmt.Errorf("error reading ostrakaflow wf: %w", err)
 	}
 
-	var file Workflow
-	err = yaml.Unmarshal(b, &file)
+	var wf Workflow
+	err = yaml.Unmarshal(b, &wf)
 	if err != nil {
-		return nil, fmt.Errorf("error parsing YAML file: %w", err)
+		return Workflow{}, fmt.Errorf("error parsing YAML wf: %w", err)
 	}
 
-	err = file.setInputs()
+	err = wf.setInputs()
 	if err != nil {
-		return nil, fmt.Errorf("unable to set inputs: %w", err)
+		return Workflow{}, fmt.Errorf("unable to set inputs: %w", err)
 	}
 
-	err = file.populateOutputs()
+	err = wf.populateOutputs()
 	if err != nil {
-		return nil, fmt.Errorf("unable to set outputs: %w", err)
+		return Workflow{}, fmt.Errorf("unable to set outputs: %w", err)
 	}
 
-	err = validate.Struct(file)
+	err = validator.New().Struct(wf)
 	if err != nil {
-		return nil, fmt.Errorf("error validating workflow: %w", err)
+		return Workflow{}, fmt.Errorf("error validating wf: %w", err)
 	}
 
-	return &file, nil
+	return wf, nil
 }
 
 func unmarshalParams(marshalled []byte, params interface{}) (err error) {
@@ -101,5 +107,10 @@ func unmarshalParams(marshalled []byte, params interface{}) (err error) {
 		return fmt.Errorf("error unmarshalling params to type %T got: %w ", params, err)
 	}
 
-	return validate.Struct(params)
+	err = validator.New().Struct(params)
+	if err != nil {
+		return fmt.Errorf("error validating params: %w", err)
+	}
+
+	return nil
 }

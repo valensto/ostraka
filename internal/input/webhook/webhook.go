@@ -6,17 +6,17 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	log "github.com/sirupsen/logrus"
-	"github.com/valensto/ostraka/internal/config"
+	"github.com/valensto/ostraka/internal/workflow"
 )
 
 type Input struct {
 	router *chi.Mux
-	config.Input
-	params config.WebhookParams
+	workflow.Input
+	params workflow.WebhookParams
 	events chan<- map[string]any
 }
 
-func New(input config.Input, router *chi.Mux, events chan<- map[string]any) (*Input, error) {
+func New(input workflow.Input, router *chi.Mux, events chan<- map[string]any) (*Input, error) {
 	params, err := input.GetAsWebhookParams()
 	if err != nil {
 		return nil, err

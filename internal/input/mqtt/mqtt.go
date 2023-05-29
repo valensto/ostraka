@@ -8,18 +8,17 @@ import (
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
-
-	"github.com/valensto/ostraka/internal/config"
+	"github.com/valensto/ostraka/internal/workflow"
 )
 
 type Client struct {
 	client    mqtt.Client
 	connected chan bool
-	params    config.MQTTParams
+	params    workflow.MQTTParams
 	events    chan<- map[string]any
 }
 
-func New(input config.Input, events chan<- map[string]any) (*Client, error) {
+func New(input workflow.Input, events chan<- map[string]any) (*Client, error) {
 	params, err := input.GetAsMQTTParams()
 	if err != nil {
 		return nil, err

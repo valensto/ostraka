@@ -3,15 +3,16 @@ package sse
 import (
 	"bytes"
 	"fmt"
+	"net/http"
+
 	"github.com/go-chi/chi/v5"
 	log "github.com/sirupsen/logrus"
-	"github.com/valensto/ostraka/internal/config"
-	"net/http"
+	"github.com/valensto/ostraka/internal/workflow"
 )
 
 type sse struct {
 	router        *chi.Mux
-	params        config.SSEParams
+	params        workflow.SSEParams
 	clients       map[client]bool
 	connecting    chan client
 	disconnecting chan client
@@ -21,7 +22,7 @@ type sse struct {
 
 type client chan []byte
 
-func Register(output config.Output, router *chi.Mux, events <-chan []byte) error {
+func Register(output workflow.Output, router *chi.Mux, events <-chan []byte) error {
 	params, err := output.ToSSEParams()
 	if err != nil {
 		return err

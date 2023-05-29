@@ -6,8 +6,8 @@ import (
 	"os/exec"
 	"time"
 
-	"github.com/valensto/ostraka/internal/config"
 	"github.com/valensto/ostraka/internal/dispatcher"
+	"github.com/valensto/ostraka/internal/workflow"
 )
 
 func main() {
@@ -18,7 +18,7 @@ func main() {
 
 func run(port string) error {
 	banner(port)
-	workflow, err := config.NewWorkflow()
+	workflow, err := workflow.NewWorkflow()
 	if err != nil {
 		return err
 	}
