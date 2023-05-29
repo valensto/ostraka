@@ -1,7 +1,8 @@
-package config
+package workflow
 
 import (
 	"fmt"
+
 	"gopkg.in/yaml.v3"
 )
 
@@ -34,7 +35,7 @@ type Condition struct {
 	Value      string      `yaml:"value" validate:"required"`
 }
 
-func (file *File) populateOutputs() error {
+func (file *Workflow) populateOutputs() error {
 	var parsedOutputs []Output
 
 	for _, output := range file.Outputs {

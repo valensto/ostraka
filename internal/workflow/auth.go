@@ -1,4 +1,4 @@
-package config
+package workflow
 
 type Auth struct {
 	Type    string  `yaml:"type"`

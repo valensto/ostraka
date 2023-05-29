@@ -1,29 +1,29 @@
 package main
 
 import (
-	"github.com/valensto/ostraka/internal/config"
-	"github.com/valensto/ostraka/internal/dispatcher"
 	"log"
 	"os"
 	"os/exec"
 	"time"
+
+	"github.com/valensto/ostraka/internal/dispatcher"
+	"github.com/valensto/ostraka/internal/workflow"
 )
 
 func main() {
-	if err := run(); err != nil {
+	if err := run("4000"); err != nil {
 		log.Fatal(err)
 	}
 }
 
-func run() error {
-	port := "4000"
+func run(port string) error {
 	banner(port)
-	conf, err := config.LoadConfig()
+	workflow, err := workflow.NewWorkflow()
 	if err != nil {
 		return err
 	}
 
-	return dispatcher.Dispatch(conf, port)
+	return dispatcher.Dispatch(workflow, port)
 }
 
 func banner(port string) {

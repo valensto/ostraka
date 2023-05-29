@@ -1,8 +1,9 @@
-package config
+package workflow
 
 import (
 	"encoding/json"
 	"fmt"
+
 	"gopkg.in/yaml.v3"
 )
 
@@ -34,13 +35,15 @@ type WebhookParams struct {
 }
 
 type MQTTParams struct {
-	Broker   string `yaml:"broker" validate:"required"`
-	User     string `yaml:"user" validate:"required"`
-	Password string `yaml:"password" validate:"required"`
-	Topic    string `yaml:"topic" validate:"required"`
+	Broker        string `yaml:"broker" validate:"required"`
+	User          string `yaml:"user" validate:"required"`
+	Password      string `yaml:"password" validate:"required"`
+	Topic         string `yaml:"topic" validate:"required"`
+	AutoReconnect bool   `yaml:"autoreconnect" validate:"required"`
+	KeepAlive     bool   `yaml:"keepalive" validate:"required"`
 }
 
-func (file *File) populateInputs() error {
+func (file *Workflow) setInputs() error {
 	var parsedInputs []Input
 
 	for _, input := range file.Inputs {
@@ -78,7 +81,7 @@ func (file *File) populateInputs() error {
 	return nil
 }
 
-func (i Input) ToWebhookParams() (WebhookParams, error) {
+func (i Input) GetAsWebhookParams() (WebhookParams, error) {
 	params, ok := i.Params.(WebhookParams)
 	if !ok {
 		return WebhookParams{}, fmt.Errorf("input params are not of type WebhookParams")
@@ -87,7 +90,7 @@ func (i Input) ToWebhookParams() (WebhookParams, error) {
 	return params, nil
 }
 
-func (i Input) ToMQTTParams() (MQTTParams, error) {
+func (i Input) GetAsMQTTParams() (MQTTParams, error) {
 	params, ok := i.Params.(MQTTParams)
 	if !ok {
 		return MQTTParams{}, fmt.Errorf("input params are not of type MQTTParams")

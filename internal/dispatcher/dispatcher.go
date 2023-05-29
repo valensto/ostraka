@@ -2,20 +2,21 @@ package dispatcher
 
 import (
 	"encoding/json"
+	"net/http"
+
 	"github.com/go-chi/chi/v5"
 	log "github.com/sirupsen/logrus"
-	"github.com/valensto/ostraka/internal/config"
-	"net/http"
+	"github.com/valensto/ostraka/internal/workflow"
 )
 
 type file struct {
-	config       config.File
+	config       workflow.Workflow
 	router       *chi.Mux
 	inputEvents  chan map[string]any
 	outputEvents chan []byte
 }
 
-func newFile(conf config.File, router *chi.Mux) *file {
+func newFile(conf workflow.Workflow, router *chi.Mux) *file {
 	return &file{
 		config:       conf,
 		router:       router,
@@ -24,11 +25,11 @@ func newFile(conf config.File, router *chi.Mux) *file {
 	}
 }
 
-func Dispatch(conf config.Config, port string) error {
+func Dispatch(workflows workflow.Workflows, port string) error {
 	router := chi.NewRouter()
 
-	for _, file := range conf {
-		f := newFile(file, router)
+	for _, workflow := range workflows {
+		f := newFile(workflow, router)
 
 		go f.dispatchEvents()
 
