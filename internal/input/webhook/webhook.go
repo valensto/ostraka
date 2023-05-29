@@ -33,7 +33,7 @@ func New(input workflow.Input, router *chi.Mux, events chan<- map[string]any) (*
 func (i *Input) Subscribe() error {
 	i.router.Post(i.params.Endpoint, i.endpoint())
 
-	log.Infof("new webhook input: %s registered with endpoint %s", i.Name, i.params.Endpoint)
+	log.Infof("input %s of type webhook registered. Listening from endpoint %s", i.Name, i.params.Endpoint)
 	return nil
 }
 

@@ -18,12 +18,12 @@ func main() {
 
 func run(port string) error {
 	banner(port)
-	workflow, err := workflow.NewWorkflow()
+	workflows, err := workflow.Build()
 	if err != nil {
 		return err
 	}
 
-	return dispatcher.Dispatch(workflow, port)
+	return dispatcher.Dispatch(workflows, port)
 }
 
 func banner(port string) {

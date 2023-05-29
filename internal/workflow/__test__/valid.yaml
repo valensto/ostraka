@@ -62,14 +62,12 @@ outputs:
               type: string
             - name: customer_email
               type: string
-      conditions:
-        - operator: and
-          conditions:
-            - source: token
-              field: customerId
-              operator: eq
-              value: "$customer_id"
-            - source: event
-              field: orderStatus
-              operator: eq
-              value: "completed"
+    conditions:
+      - source: token
+        field: customerId
+        operator: eq
+        value: "$customer_id"
+      - source: event
+        field: orderStatus
+        operator: eq
+        value: "completed"

@@ -15,9 +15,14 @@ import (
 type Workflows []Workflow
 
 type Workflow struct {
-	Inputs  []Input  `yaml:"inputs" validate:"required,dive,required"`
 	Event   Event    `yaml:"event" validate:"required,dive,required"`
+	Inputs  []Input  `yaml:"inputs" validate:"required,dive,required"`
 	Outputs []Output `yaml:"outputs" validate:"required,dive,required"`
+}
+
+type Event struct {
+	Type   string  `yaml:"type" validate:"required"`
+	Fields []Field `yaml:"fields" validate:"required,dive,required"`
 }
 
 type Field struct {
@@ -26,8 +31,8 @@ type Field struct {
 	Required bool   `yaml:"required"`
 }
 
-func NewWorkflow() (Workflows, error) {
-	directory := "resources"
+func Build() (Workflows, error) {
+	directory := ".ostraka/workflows"
 	dir, err := os.ReadDir(directory)
 	if err != nil {
 		return nil, fmt.Errorf("error reading resources directory: %w", err)
@@ -51,10 +56,10 @@ func NewWorkflow() (Workflows, error) {
 	return workflows, nil
 }
 
-func extractWorkflow(fname string) (Workflow, error) {
-	f, err := os.Open(fname)
+func extractWorkflow(filename string) (Workflow, error) {
+	f, err := os.Open(filename)
 	if err != nil {
-		return Workflow{}, fmt.Errorf("error opening file %s: %w", fname, err)
+		return Workflow{}, fmt.Errorf("error opening file %s: %w", filename, err)
 	}
 	defer f.Close()
 
@@ -83,7 +88,7 @@ func readConfig(r io.Reader) (Workflow, error) {
 		return Workflow{}, fmt.Errorf("unable to set inputs: %w", err)
 	}
 
-	err = wf.populateOutputs()
+	err = wf.setOutputs()
 	if err != nil {
 		return Workflow{}, fmt.Errorf("unable to set outputs: %w", err)
 	}

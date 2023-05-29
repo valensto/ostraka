@@ -1,7 +1,6 @@
 package workflow
 
 import (
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -124,21 +123,16 @@ func Test_parseFile(t *testing.T) {
 						},
 						Conditions: []Condition{
 							{
-								Operator: "and",
-								Conditions: []Condition{
-									{
-										Source:   "token",
-										Field:    "customerId",
-										Operator: "eq",
-										Value:    "$customer_id",
-									},
-									{
-										Source:   "event",
-										Field:    "orderStatus",
-										Operator: "eq",
-										Value:    "completed",
-									},
-								},
+								Source:   "token",
+								Field:    "customerId",
+								Operator: "eq",
+								Value:    "$customer_id",
+							},
+							{
+								Source:   "event",
+								Field:    "orderStatus",
+								Operator: "eq",
+								Value:    "completed",
 							},
 						},
 					},
@@ -149,11 +143,7 @@ func Test_parseFile(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			f, err := os.Open(tt.path)
-			require.NoError(t, err)
-			defer f.Close()
-
-			got, err := readConfig(f)
+			got, err := extractWorkflow(tt.path)
 			if tt.fails {
 				require.Error(t, err)
 				return
@@ -173,7 +163,7 @@ func Test_parseFile(t *testing.T) {
 				require.Equal(t, tt.want.Outputs[i].Name, got.Outputs[i].Name)
 				require.Equal(t, tt.want.Outputs[i].Type, got.Outputs[i].Type)
 				require.Equal(t, tt.want.Outputs[i].Params, got.Outputs[i].Params)
-				//require.Equal(t, tt.want.Outputs[i].Conditions, got.Outputs[i].Conditions)
+				require.Equal(t, tt.want.Outputs[i].Conditions, got.Outputs[i].Conditions)
 			}
 		})
 	}

@@ -41,7 +41,7 @@ func Register(output workflow.Output, router *chi.Mux, events <-chan []byte) err
 	sse.listen(events)
 	sse.router.Get(params.Endpoint, sse.endpoint())
 
-	log.Infof("new sse output: %s registered on endpoint %s", output.Name, params.Endpoint)
+	log.Infof("output %s of type SSE registered. Sending to endpoint %s", output.Name, params.Endpoint)
 	return nil
 }
 

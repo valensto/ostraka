@@ -3,7 +3,6 @@ package workflow
 import (
 	"encoding/json"
 	"fmt"
-
 	"gopkg.in/yaml.v3"
 )
 
@@ -43,10 +42,10 @@ type MQTTParams struct {
 	KeepAlive     bool   `yaml:"keepalive" validate:"required"`
 }
 
-func (file *Workflow) setInputs() error {
+func (wf *Workflow) setInputs() error {
 	var parsedInputs []Input
 
-	for _, input := range file.Inputs {
+	for _, input := range wf.Inputs {
 		marshalled, err := yaml.Marshal(input.Params)
 		if err != nil {
 			return fmt.Errorf("error marshalling input params: %w", err)
@@ -73,11 +72,11 @@ func (file *Workflow) setInputs() error {
 			return fmt.Errorf("unknown input type: %s", input.Type)
 		}
 
-		input.Decoder.event = file.Event
+		input.Decoder.event = wf.Event
 		parsedInputs = append(parsedInputs, input)
 	}
 
-	file.Inputs = parsedInputs
+	wf.Inputs = parsedInputs
 	return nil
 }
 

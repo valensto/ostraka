@@ -1,8 +1,6 @@
 .env
-/internal/config/resources/*.yaml
-/internal/config/resources/*.json
-/internal/config/resources/*.xml
-/internal/config/resources/*.yml
+/.ostraka/workflows/*
+
 # Created by .ignore support plugin (hsz.mobi)
 ### Go template
 # Binaries for programs and plugins
@@ -155,4 +153,3 @@ Temporary Items
 
 # Built Visual Studio Code Extensions
 *.vsix
-

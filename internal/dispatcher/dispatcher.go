@@ -9,36 +9,32 @@ import (
 	"github.com/valensto/ostraka/internal/workflow"
 )
 
-type file struct {
-	config       workflow.Workflow
+type dispatcher struct {
+	workflow     workflow.Workflow
 	router       *chi.Mux
 	inputEvents  chan map[string]any
 	outputEvents chan []byte
 }
 
-func newFile(conf workflow.Workflow, router *chi.Mux) *file {
-	return &file{
-		config:       conf,
-		router:       router,
-		inputEvents:  make(chan map[string]any, len(conf.Inputs)),
-		outputEvents: make(chan []byte, len(conf.Outputs)),
-	}
-}
-
 func Dispatch(workflows workflow.Workflows, port string) error {
 	router := chi.NewRouter()
 
-	for _, workflow := range workflows {
-		f := newFile(workflow, router)
+	for _, wf := range workflows {
+		d := &dispatcher{
+			workflow:     wf,
+			router:       router,
+			inputEvents:  make(chan map[string]any, len(wf.Inputs)),
+			outputEvents: make(chan []byte, len(wf.Outputs)),
+		}
 
-		go f.dispatchEvents()
+		go d.dispatchEvents()
 
-		err := f.subscribeInputs()
+		err := d.subscribeInputs()
 		if err != nil {
 			return err
 		}
 
-		err = f.registerOutputs()
+		err = d.registerOutputs()
 		if err != nil {
 			return err
 		}
@@ -47,10 +43,10 @@ func Dispatch(workflows workflow.Workflows, port string) error {
 	return http.ListenAndServe(":"+port, router)
 }
 
-func (f file) dispatchEvents() {
+func (d dispatcher) dispatchEvents() {
 	for {
 		select {
-		case event := <-f.inputEvents:
+		case event := <-d.inputEvents:
 			data, err := json.Marshal(event)
 			if err != nil {
 				log.Warnf("error marshaling event: %v", err)
@@ -58,7 +54,7 @@ func (f file) dispatchEvents() {
 			}
 
 			log.Infof("event dispatched: %s", data)
-			f.outputEvents <- data
+			d.outputEvents <- data
 		}
 	}
 }
