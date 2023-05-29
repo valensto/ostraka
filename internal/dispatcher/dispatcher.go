@@ -43,10 +43,10 @@ func Dispatch(workflows workflow.Workflows, port string) error {
 	return http.ListenAndServe(":"+port, router)
 }
 
-func (f dispatcher) dispatchEvents() {
+func (d dispatcher) dispatchEvents() {
 	for {
 		select {
-		case event := <-f.inputEvents:
+		case event := <-d.inputEvents:
 			data, err := json.Marshal(event)
 			if err != nil {
 				log.Warnf("error marshaling event: %v", err)
@@ -54,7 +54,7 @@ func (f dispatcher) dispatchEvents() {
 			}
 
 			log.Infof("event dispatched: %s", data)
-			f.outputEvents <- data
+			d.outputEvents <- data
 		}
 	}
 }

@@ -7,11 +7,11 @@ import (
 	"github.com/valensto/ostraka/internal/workflow"
 )
 
-func (f dispatcher) subscribeInputs() error {
-	for _, i := range f.workflow.Inputs {
+func (d dispatcher) subscribeInputs() error {
+	for _, i := range d.workflow.Inputs {
 		switch i.Type {
 		case workflow.Webhook:
-			input, err := webhook.New(i, f.router, f.inputEvents)
+			input, err := webhook.New(i, d.router, d.inputEvents)
 			if err != nil {
 				return fmt.Errorf("error creating webhook input: %w", err)
 			}
@@ -21,7 +21,7 @@ func (f dispatcher) subscribeInputs() error {
 			}
 
 		case workflow.MQTT:
-			input, err := mqtt.New(i, f.inputEvents)
+			input, err := mqtt.New(i, d.inputEvents)
 			if err != nil {
 				return fmt.Errorf("error creating MQTT input: %w", err)
 			}

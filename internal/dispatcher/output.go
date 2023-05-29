@@ -6,11 +6,11 @@ import (
 	"github.com/valensto/ostraka/internal/workflow"
 )
 
-func (f dispatcher) registerOutputs() error {
-	for _, output := range f.workflow.Outputs {
+func (d dispatcher) registerOutputs() error {
+	for _, output := range d.workflow.Outputs {
 		switch output.Type {
 		case workflow.SSE:
-			err := sse.Register(output, f.router, f.outputEvents)
+			err := sse.Register(output, d.router, d.outputEvents)
 			if err != nil {
 				return fmt.Errorf("error registering SSE output: %w", err)
 			}
