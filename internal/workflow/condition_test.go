@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func TestOutput_MatchConditions(t *testing.T) {
+func TestCondition_MatchConditions(t *testing.T) {
 	type fields struct {
 		Name      string
 		Type      string
@@ -154,7 +154,7 @@ func TestOutput_MatchConditions(t *testing.T) {
 				Condition: tt.fields.Condition,
 			}
 
-			match := o.Condition.IsMatching(tt.event)
+			match := o.Condition.Match(tt.event)
 			require.Equal(t, tt.isMatching, match)
 		})
 	}

@@ -66,7 +66,7 @@ func (d dispatcher) dispatchEvents() {
 					continue
 				}
 
-				match := output.Condition.IsMatching(event)
+				match := output.Condition.Match(event)
 				if !match {
 					continue
 				}
