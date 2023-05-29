@@ -18,7 +18,7 @@ func main() {
 
 func run(port string) error {
 	banner(port)
-	workflows, err := workflow.Parse()
+	workflows, err := workflow.Build()
 	if err != nil {
 		return err
 	}

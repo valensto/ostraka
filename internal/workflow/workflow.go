@@ -31,7 +31,7 @@ type Field struct {
 	Required bool   `yaml:"required"`
 }
 
-func Parse() (Workflows, error) {
+func Build() (Workflows, error) {
 	directory := ".ostraka/workflows"
 	dir, err := os.ReadDir(directory)
 	if err != nil {
