@@ -48,7 +48,7 @@ func New(output workflow.Output, router *chi.Mux, events <-chan []byte) (*Output
 func (o *Output) Register() error {
 	o.router.Get(o.params.Endpoint, o.endpoint())
 
-	logger.Get().Info().Msgf("output %s of type SSE registered. Sending to endpoint %s", output.Name, params.Endpoint)
+	logger.Get().Info().Msgf("output %s of type SSE registered. Sending to endpoint %s", o.name, o.params.Endpoint)
 	return nil
 }
 

@@ -64,7 +64,7 @@ func extractWorkflow(filename string) (Workflow, error) {
 	defer func(f *os.File) {
 		err := f.Close()
 		if err != nil {
-			log.Errorf("error closing file %s: %v", filename, err)
+			logger.Get().Error().Msgf("error closing file %s: %v", filename, err)
 		}
 	}(f)
 
