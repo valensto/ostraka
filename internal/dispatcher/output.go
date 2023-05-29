@@ -6,7 +6,7 @@ import (
 	"github.com/valensto/ostraka/internal/workflow"
 )
 
-func (f file) registerOutputs() error {
+func (f dispatcher) registerOutputs() error {
 	for _, output := range f.workflow.Outputs {
 		switch output.Type {
 		case workflow.SSE:

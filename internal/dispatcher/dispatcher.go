@@ -9,36 +9,32 @@ import (
 	"github.com/valensto/ostraka/internal/workflow"
 )
 
-type file struct {
+type dispatcher struct {
 	workflow     workflow.Workflow
 	router       *chi.Mux
 	inputEvents  chan map[string]any
 	outputEvents chan []byte
 }
 
-func newFile(wf workflow.Workflow, router *chi.Mux) *file {
-	return &file{
-		workflow:     wf,
-		router:       router,
-		inputEvents:  make(chan map[string]any, len(wf.Inputs)),
-		outputEvents: make(chan []byte, len(wf.Outputs)),
-	}
-}
-
 func Dispatch(workflows workflow.Workflows, port string) error {
 	router := chi.NewRouter()
 
 	for _, wf := range workflows {
-		f := newFile(wf, router)
+		d := &dispatcher{
+			workflow:     wf,
+			router:       router,
+			inputEvents:  make(chan map[string]any, len(wf.Inputs)),
+			outputEvents: make(chan []byte, len(wf.Outputs)),
+		}
 
-		go f.dispatchEvents()
+		go d.dispatchEvents()
 
-		err := f.subscribeInputs()
+		err := d.subscribeInputs()
 		if err != nil {
 			return err
 		}
 
-		err = f.registerOutputs()
+		err = d.registerOutputs()
 		if err != nil {
 			return err
 		}
@@ -47,7 +43,7 @@ func Dispatch(workflows workflow.Workflows, port string) error {
 	return http.ListenAndServe(":"+port, router)
 }
 
-func (f file) dispatchEvents() {
+func (f dispatcher) dispatchEvents() {
 	for {
 		select {
 		case event := <-f.inputEvents:

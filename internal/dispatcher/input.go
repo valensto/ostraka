@@ -7,7 +7,7 @@ import (
 	"github.com/valensto/ostraka/internal/workflow"
 )
 
-func (f file) subscribeInputs() error {
+func (f dispatcher) subscribeInputs() error {
 	for _, i := range f.workflow.Inputs {
 		switch i.Type {
 		case workflow.Webhook:
