@@ -11,8 +11,9 @@ import (
 	"github.com/valensto/ostraka/logger"
 )
 
-type sse struct {
+type Output struct {
 	router        *chi.Mux
+	name          string
 	params        workflow.SSEParams
 	clients       map[client]bool
 	connecting    chan client
@@ -23,14 +24,15 @@ type sse struct {
 
 type client chan []byte
 
-func Register(output workflow.Output, router *chi.Mux, events <-chan []byte) error {
+func New(output workflow.Output, router *chi.Mux, events <-chan []byte) (*Output, error) {
 	params, err := output.ToSSEParams()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	sse := sse{
+	o := &Output{
 		router:        router,
+		name:          output.Name,
 		params:        params,
 		clients:       make(map[client]bool),
 		connecting:    make(chan client),
@@ -38,15 +40,19 @@ func Register(output workflow.Output, router *chi.Mux, events <-chan []byte) err
 		bufSize:       2,
 		eventCounter:  0,
 	}
+	o.listen(events)
 
-	sse.listen(events)
-	sse.router.Get(params.Endpoint, sse.endpoint())
+	return o, nil
+}
+
+func (o *Output) Register() error {
+	o.router.Get(o.params.Endpoint, o.endpoint())
 
 	logger.Get().Info().Msgf("output %s of type SSE registered. Sending to endpoint %s", output.Name, params.Endpoint)
 	return nil
 }
 
-func (s sse) endpoint() http.HandlerFunc {
+func (o *Output) endpoint() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		fl, ok := w.(http.Flusher)
 		if !ok {
@@ -55,6 +61,8 @@ func (s sse) endpoint() http.HandlerFunc {
 			return
 		}
 
+		done := r.Context().Done()
+
 		h := w.Header()
 		h.Set("Access-Control-Allow-Origin", "*")
 		h.Set("Access-Control-Allow-Headers", "Content-Type")
@@ -62,14 +70,13 @@ func (s sse) endpoint() http.HandlerFunc {
 		h.Set("Connection", "keep-alive")
 		h.Set("Content-Type", "text/event-stream")
 
-		cl := make(client, s.bufSize)
-		s.connecting <- cl
+		cl := make(client, o.bufSize)
+		o.connecting <- cl
 
-		ctx := r.Context()
 		for {
 			select {
-			case <-ctx.Done():
-				s.disconnecting <- cl
+			case <-done:
+				o.disconnecting <- cl
 				return
 
 			case event := <-cl:
@@ -80,20 +87,20 @@ func (s sse) endpoint() http.HandlerFunc {
 	}
 }
 
-func (s sse) listen(events <-chan []byte) {
+func (o *Output) listen(events <-chan []byte) {
 	go func() {
 		for {
 			select {
-			case cl := <-s.connecting:
-				s.clients[cl] = true
+			case cl := <-o.connecting:
+				o.clients[cl] = true
 
-			case cl := <-s.disconnecting:
-				delete(s.clients, cl)
+			case cl := <-o.disconnecting:
+				delete(o.clients, cl)
 
 			case event := <-events:
-				msg := format(fmt.Sprintf("%d", s.eventCounter), "message", event)
-				s.eventCounter++
-				for cl := range s.clients {
+				msg := format(fmt.Sprintf("%d", o.eventCounter), "message", event)
+				o.eventCounter++
+				for cl := range o.clients {
 					cl <- msg.Bytes()
 				}
 			}

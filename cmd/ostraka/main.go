@@ -19,7 +19,7 @@ func main() {
 }
 
 func run(port string) error {
-	workflows, err := workflow.Build()
+	workflows, err := workflow.Build(".ostraka/workflows")
 	if err != nil {
 		return err
 	}
@@ -36,7 +36,7 @@ func banner(port string) {
 ╚██████╔╝███████║   ██║   ██║  ██║██║  ██║██║  ██╗██║  ██║
  ╚═════╝ ╚══════╝   ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝
 https://github.com/valensto/ostraka - %v ©
-App running on port - %v
+HTTP server running on port - %v
 
 `
 	t := time.Now()

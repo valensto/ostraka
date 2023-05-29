@@ -32,9 +32,8 @@ type Field struct {
 	Required bool   `yaml:"required"`
 }
 
-func Build() (Workflows, error) {
-	directory := ".ostraka/workflows"
-	dir, err := os.ReadDir(directory)
+func Build(fromDir string) (Workflows, error) {
+	dir, err := os.ReadDir(fromDir)
 	if err != nil {
 		return nil, fmt.Errorf("error reading resources directory: %w", err)
 	}
@@ -43,11 +42,11 @@ func Build() (Workflows, error) {
 	for _, file := range dir {
 		ext := filepath.Ext(file.Name())
 		if ext != ".yaml" && ext != ".yml" {
-			logger.Get().Warn().Msgf(`unable to find .yaml or .yml file. '%s' will be skipped`, file.Name())
+			logger.Get().Warn().Msgf(`file (%s) be skipped. No matching with authorized extensions (yaml | yml) found`, file.Name())
 			continue
 		}
 
-		wf, err := extractWorkflow(filepath.Join(directory, file.Name()))
+		wf, err := extractWorkflow(filepath.Join(fromDir, file.Name()))
 		if err != nil {
 			return nil, fmt.Errorf("error extracting workflow: %w", err)
 		}
@@ -62,9 +61,19 @@ func extractWorkflow(filename string) (Workflow, error) {
 	if err != nil {
 		return Workflow{}, fmt.Errorf("error opening file %s: %w", filename, err)
 	}
-	defer f.Close()
+	defer func(f *os.File) {
+		err := f.Close()
+		if err != nil {
+			log.Errorf("error closing file %s: %v", filename, err)
+		}
+	}(f)
 
-	workflow, err := readConfig(f)
+	b, err := io.ReadAll(f)
+	if err != nil {
+		return Workflow{}, fmt.Errorf("error reading ostrakaflow wf: %w", err)
+	}
+
+	workflow, err := unmarshalWorkflow(b)
 	if err != nil {
 		return Workflow{}, fmt.Errorf("error parsing f: %w", err)
 	}
@@ -72,14 +81,9 @@ func extractWorkflow(filename string) (Workflow, error) {
 	return workflow, nil
 }
 
-func readConfig(r io.Reader) (Workflow, error) {
-	b, err := io.ReadAll(r)
-	if err != nil {
-		return Workflow{}, fmt.Errorf("error reading ostrakaflow wf: %w", err)
-	}
-
+func unmarshalWorkflow(b []byte) (Workflow, error) {
 	var wf Workflow
-	err = yaml.Unmarshal(b, &wf)
+	err := yaml.Unmarshal(b, &wf)
 	if err != nil {
 		return Workflow{}, fmt.Errorf("error parsing YAML wf: %w", err)
 	}
