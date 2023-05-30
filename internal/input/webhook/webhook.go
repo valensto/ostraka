@@ -1,11 +1,10 @@
 package webhook
 
 import (
+	"github.com/go-chi/chi/v5"
+	"github.com/valensto/ostraka/internal/logger"
 	"io"
 	"net/http"
-
-	"github.com/go-chi/chi/v5"
-	"github.com/rs/zerolog/log"
 
 	"github.com/valensto/ostraka/internal/workflow"
 )
@@ -18,7 +17,7 @@ type Input struct {
 }
 
 func New(input workflow.Input, router *chi.Mux, events chan<- map[string]any) (*Input, error) {
-	params, err := input.GetAsWebhookParams()
+	params, err := input.WebhookParams()
 	if err != nil {
 		return nil, err
 	}
@@ -34,7 +33,7 @@ func New(input workflow.Input, router *chi.Mux, events chan<- map[string]any) (*
 func (i *Input) Subscribe() error {
 	i.router.Post(i.params.Endpoint, i.endpoint())
 
-	log.Info().Msgf("input %s of type webhook registered. Listening from endpoint %s", i.Name, i.params.Endpoint)
+	logger.Get().Info().Msgf("input %s of type webhook registered. Listening from endpoint %s", i.Name, i.params.Endpoint)
 	return nil
 }
 
@@ -48,7 +47,7 @@ func (i *Input) endpoint() http.HandlerFunc {
 
 		decoded, err := i.Decoder.Decode(bytes)
 		if err != nil {
-			log.Error().Msgf("error decoding webhook input: %s", err)
+			logger.Get().Error().Msgf("error decoding webhook input: %s", err)
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}

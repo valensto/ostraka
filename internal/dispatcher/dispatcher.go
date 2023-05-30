@@ -1,35 +1,39 @@
 package dispatcher
 
 import (
+	"context"
 	"encoding/json"
+	"github.com/go-chi/chi/v5"
+	"github.com/valensto/ostraka/internal/logger"
 	"net/http"
 
-	"github.com/go-chi/chi/v5"
-
 	"github.com/valensto/ostraka/internal/workflow"
-	"github.com/valensto/ostraka/logger"
 )
 
+type extractor interface {
+	Extract(_ context.Context) ([]*workflow.Workflow, error)
+}
+
 type dispatcher struct {
-	workflow     workflow.Workflow
+	workflow     *workflow.Workflow
 	router       *chi.Mux
 	inputEvents  chan map[string]any
 	outputEvents map[string]chan []byte
-	outputs      map[string]workflow.Output
 }
 
-func Dispatch(workflows workflow.Workflows, port string) error {
+func Dispatch(ctx context.Context, extractor extractor, port string) error {
 	router := chi.NewRouter()
+	workflows, err := extractor.Extract(ctx)
+	if err != nil {
+		return err
+	}
 
 	for _, wf := range workflows {
 		d := &dispatcher{
-			workflow:    wf,
-			router:      router,
-			inputEvents: make(chan map[string]any, len(wf.Inputs)),
-			// TODO: clean up outputEvents and outputs
-			// create map workflow.Name => workflow during workflow creation
+			workflow:     wf,
+			router:       router,
+			inputEvents:  make(chan map[string]any, len(wf.Inputs)),
 			outputEvents: make(map[string]chan []byte),
-			outputs:      make(map[string]workflow.Output),
 		}
 
 		go d.dispatchEvents()
@@ -60,7 +64,7 @@ func (d dispatcher) dispatchEvents() {
 			}
 
 			for outputName, c := range d.outputEvents {
-				output, ok := d.outputs[outputName]
+				output, ok := d.workflow.Outputs[outputName]
 				if !ok {
 					log.Warn().Msgf("output %s not found", outputName)
 					continue

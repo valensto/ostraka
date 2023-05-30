@@ -3,109 +3,89 @@ package workflow
 import (
 	"encoding/json"
 	"fmt"
-
-	"gopkg.in/yaml.v3"
 )
 
-const (
-	Webhook = "webhook"
-	MQTT    = "mqtt"
-)
+type Input struct {
+	Name    string
+	Source  Source
+	Decoder Decoder
+	params  interface{}
+}
 
-type InputEvent map[string]any
-
-func (i InputEvent) MarshalJSON() ([]byte, error) {
-
-	b, err := json.Marshal(i)
+func UnmarshallInput(name, source string, decoder Decoder, params interface{}, event *Event) (*Input, error) {
+	src, err := getSource(source)
 	if err != nil {
 		return nil, err
 	}
 
-	in := json.RawMessage(b)
-	return in.MarshalJSON()
-}
-
-func (i *InputEvent) UnmarshalJSON(b []byte) error {
-	var in json.RawMessage
-	err := in.UnmarshalJSON(b)
-	if err != nil {
-		return err
+	i := &Input{
+		Name:    name,
+		Source:  src,
+		Decoder: decoder,
+		params:  params,
 	}
 
-	return json.Unmarshal(in, i)
-}
+	err = i.unmarshallParams(event)
+	if err != nil {
+		return nil, err
+	}
 
-type Input struct {
-	Name    string      `yaml:"name" validate:"required"`
-	Type    string      `yaml:"type" validate:"required"`
-	Decoder Decoder     `yaml:"decoder" validate:"required,dive,required"`
-	Params  interface{} `yaml:"params" validate:"required"`
-}
-
-type Decoder struct {
-	Type    string   `yaml:"type" validate:"required"`
-	Mappers []Mapper `yaml:"mappers" validate:"required,dive,required"`
-	event   Event    `yaml:"-"`
-}
-
-type Mapper struct {
-	Source string `yaml:"source" validate:"required"`
-	Target string `yaml:"target" validate:"required"`
+	return i, nil
 }
 
 type WebhookParams struct {
-	Endpoint string `yaml:"endpoint" validate:"required"`
+	Endpoint string `json:"endpoint"`
 }
 
 type MQTTParams struct {
-	Broker        string `yaml:"broker" validate:"required"`
-	User          string `yaml:"user" validate:"required"`
-	Password      string `yaml:"password" validate:"required"`
-	Topic         string `yaml:"topic" validate:"required"`
-	AutoReconnect bool   `yaml:"autoreconnect" validate:"required"`
-	KeepAlive     bool   `yaml:"keepalive" validate:"required"`
+	Broker        string `json:"broker"`
+	User          string `json:"user"`
+	Password      string `json:"password"`
+	Topic         string `json:"topic"`
+	AutoReconnect bool   `json:"autoReconnect"`
+	KeepAlive     bool   `json:"keepAlive"`
 }
 
-func (wf *Workflow) setInputs() error {
-	var parsedInputs []Input
-
-	for _, input := range wf.Inputs {
-		marshalled, err := yaml.Marshal(input.Params)
-		if err != nil {
-			return fmt.Errorf("error marshalling input params: %w", err)
-		}
-
-		switch input.Type {
-		case Webhook:
-			var params WebhookParams
-			err := unmarshalParams(marshalled, &params)
-			if err != nil {
-				return err
-			}
-			input.Params = params
-
-		case MQTT:
-			var params MQTTParams
-			err := unmarshalParams(marshalled, &params)
-			if err != nil {
-				return err
-			}
-			input.Params = params
-
-		default:
-			return fmt.Errorf("unknown input type: %s", input.Type)
-		}
-
-		input.Decoder.event = wf.Event
-		parsedInputs = append(parsedInputs, input)
+func (i *Input) unmarshallParams(e *Event) error {
+	marshalled, err := json.Marshal(i.params)
+	if err != nil {
+		return fmt.Errorf("error marshalling input params: %w", err)
 	}
 
-	wf.Inputs = parsedInputs
-	return nil
+	var params parameter
+	switch i.Source {
+	case Webhook:
+		var wh WebhookParams
+		err = unmarshalParams(marshalled, &wh)
+		if err != nil {
+			return err
+		}
+
+		params = wh
+	case MQTT:
+		var mqtt MQTTParams
+		err = unmarshalParams(marshalled, &mqtt)
+		if err != nil {
+			return err
+		}
+
+		params = mqtt
+	default:
+		return fmt.Errorf("unknown input type: %s", i.Source)
+	}
+
+	i.params = params
+	i.Decoder.event = e
+
+	return params.validate()
 }
 
-func (i Input) GetAsWebhookParams() (WebhookParams, error) {
-	params, ok := i.Params.(WebhookParams)
+func (i *Input) WebhookParams() (WebhookParams, error) {
+	if i.Source != Webhook {
+		return WebhookParams{}, fmt.Errorf("input source is not Webhook")
+	}
+
+	params, ok := i.params.(WebhookParams)
 	if !ok {
 		return WebhookParams{}, fmt.Errorf("input params are not of type WebhookParams")
 	}
@@ -113,8 +93,20 @@ func (i Input) GetAsWebhookParams() (WebhookParams, error) {
 	return params, nil
 }
 
-func (i Input) GetAsMQTTParams() (MQTTParams, error) {
-	params, ok := i.Params.(MQTTParams)
+func (w WebhookParams) validate() error {
+	if w.Endpoint == "" {
+		return fmt.Errorf("webhook endpoint is empty")
+	}
+
+	return nil
+}
+
+func (i *Input) MQTTParams() (MQTTParams, error) {
+	if i.Source != MQTT {
+		return MQTTParams{}, fmt.Errorf("input source is not MQTT")
+	}
+
+	params, ok := i.params.(MQTTParams)
 	if !ok {
 		return MQTTParams{}, fmt.Errorf("input params are not of type MQTTParams")
 	}
@@ -122,47 +114,22 @@ func (i Input) GetAsMQTTParams() (MQTTParams, error) {
 	return params, nil
 }
 
-func (d Decoder) Decode(data []byte) (map[string]any, error) {
-	if d.Type != "json" {
-		return nil, fmt.Errorf("unknown decoder type: %s", d.Type)
+func (mqtt MQTTParams) validate() error {
+	if mqtt.Broker == "" {
+		return fmt.Errorf("mqtt broker is empty")
 	}
 
-	var source map[string]any
-	err := json.Unmarshal(data, &source)
-	if err != nil {
-		return nil, fmt.Errorf("error decoding message: %w", err)
+	if mqtt.Topic == "" {
+		return fmt.Errorf("mqtt topic is empty")
 	}
 
-	var decoded = map[string]any{}
-	for _, field := range d.event.Fields {
-		sf, ok := d.findSourceField(field.Name)
-		if !ok && field.Required {
-			return nil, fmt.Errorf("required field %s not found", field.Name)
-		}
-
-		v, ok := source[sf]
-		if !ok && field.Required {
-			return nil, fmt.Errorf("required field %s not found", field.Name)
-		}
-
-		// TODO: check field type
-		/*_, ok = value.(field.Type)
-		if !ok {
-			return nil, fmt.Errorf("field %s is not of type %s", field.Name, field.Type)
-		}*/
-
-		decoded[field.Name] = v
+	if mqtt.User == "" {
+		return fmt.Errorf("mqtt user is empty")
 	}
 
-	return decoded, nil
-}
-
-func (d Decoder) findSourceField(target string) (source string, found bool) {
-	for _, mapper := range d.Mappers {
-		if mapper.Target == target {
-			return mapper.Source, true
-		}
+	if mqtt.Password == "" {
+		return fmt.Errorf("mqtt password is empty")
 	}
 
-	return "", false
+	return nil
 }

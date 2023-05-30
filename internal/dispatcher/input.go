@@ -13,8 +13,8 @@ type InputProvider interface {
 }
 
 func (d dispatcher) subscribeInputs() error {
-	for _, i := range d.workflow.Inputs {
-		provider, err := d.getInputProvider(i)
+	for _, input := range d.workflow.Inputs {
+		provider, err := d.getInputProvider(input)
 		if err != nil {
 			return fmt.Errorf("error getting input provider: %w", err)
 		}
@@ -29,12 +29,12 @@ func (d dispatcher) subscribeInputs() error {
 }
 
 func (d dispatcher) getInputProvider(i workflow.Input) (InputProvider, error) {
-	switch i.Type {
+	switch i.Source {
 	case workflow.Webhook:
 		return webhook.New(i, d.router, d.inputEvents)
 	case workflow.MQTT:
 		return mqtt.New(i, d.inputEvents)
 	default:
-		return nil, fmt.Errorf("unknown input type: %s", i.Type)
+		return nil, fmt.Errorf("unknown input type: %s", i.Source)
 	}
 }
