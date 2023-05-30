@@ -8,33 +8,33 @@ import (
 	"github.com/valensto/ostraka/internal/workflow"
 )
 
+type InputProvider interface {
+	Subscribe() error
+}
+
 func (d dispatcher) subscribeInputs() error {
 	for _, i := range d.workflow.Inputs {
-		switch i.Type {
-		case workflow.Webhook:
-			input, err := webhook.New(i, d.router, d.inputEvents)
-			if err != nil {
-				return fmt.Errorf("error creating webhook input: %w", err)
-			}
-			err = input.Subscribe()
-			if err != nil {
-				return fmt.Errorf("error subscribing webhook input: %w", err)
-			}
+		provider, err := d.getInputProvider(i)
+		if err != nil {
+			return fmt.Errorf("error getting input provider: %w", err)
+		}
 
-		case workflow.MQTT:
-			input, err := mqtt.New(i, d.inputEvents)
-			if err != nil {
-				return fmt.Errorf("error creating MQTT input: %w", err)
-			}
-			err = input.Subscribe()
-			if err != nil {
-				return fmt.Errorf("error subscribing MQTT input: %w", err)
-			}
-
-		default:
-			return fmt.Errorf("unknown input type: %s", i.Type)
+		err = provider.Subscribe()
+		if err != nil {
+			return fmt.Errorf("error subscribing input: %w", err)
 		}
 	}
 
 	return nil
+}
+
+func (d dispatcher) getInputProvider(i workflow.Input) (InputProvider, error) {
+	switch i.Type {
+	case workflow.Webhook:
+		return webhook.New(i, d.router, d.inputEvents)
+	case workflow.MQTT:
+		return mqtt.New(i, d.inputEvents)
+	default:
+		return nil, fmt.Errorf("unknown input type: %s", i.Type)
+	}
 }

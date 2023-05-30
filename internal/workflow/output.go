@@ -10,22 +10,15 @@ const (
 )
 
 type Output struct {
-	Name       string      `yaml:"name" validate:"required"`
-	Type       string      `yaml:"type" validate:"required"`
-	Params     interface{} `yaml:"params" validate:"required"`
-	Conditions []Condition `yaml:"conditions"`
+	Name      string      `yaml:"name" validate:"required"`
+	Type      string      `yaml:"type" validate:"required"`
+	Params    interface{} `yaml:"params" validate:"required"`
+	Condition *Condition  `yaml:"condition,omitempty"`
 }
 
 type SSEParams struct {
 	Endpoint string `yaml:"endpoint" validate:"required"`
 	Auth     Auth   `yaml:"auth" validate:"omitempty"`
-}
-
-type Condition struct {
-	Source   string `yaml:"source" validate:"required"`
-	Field    string `yaml:"field" validate:"required"`
-	Operator string `yaml:"operator" validate:"required"`
-	Value    string `yaml:"value" validate:"required"`
 }
 
 func (wf *Workflow) setOutputs() error {

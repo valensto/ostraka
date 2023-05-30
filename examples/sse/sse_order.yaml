@@ -33,7 +33,20 @@ outputs:
     type: sse
     params:
       endpoint: /sse/orders/completed
+    condition:
+      operator: or
+      conditions:
+        - field: orderStatus
+          operator: eq
+          value: "completed"
+        - field: orderStatus
+          operator: eq
+          value: "pending"
   - name: sse-orders-failed
     type: sse
     params:
       endpoint: /sse/orders/failed
+    condition:
+      field: orderStatus
+      operator: eq
+      value: "failed"

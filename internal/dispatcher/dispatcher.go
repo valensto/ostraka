@@ -14,7 +14,8 @@ type dispatcher struct {
 	workflow     workflow.Workflow
 	router       *chi.Mux
 	inputEvents  chan map[string]any
-	outputEvents chan []byte
+	outputEvents map[string]chan []byte
+	outputs      map[string]workflow.Output
 }
 
 func Dispatch(workflows workflow.Workflows, port string) error {
@@ -22,10 +23,13 @@ func Dispatch(workflows workflow.Workflows, port string) error {
 
 	for _, wf := range workflows {
 		d := &dispatcher{
-			workflow:     wf,
-			router:       router,
-			inputEvents:  make(chan map[string]any, len(wf.Inputs)),
-			outputEvents: make(chan []byte, len(wf.Outputs)),
+			workflow:    wf,
+			router:      router,
+			inputEvents: make(chan map[string]any, len(wf.Inputs)),
+			// TODO: clean up outputEvents and outputs
+			// create map workflow.Name => workflow during workflow creation
+			outputEvents: make(map[string]chan []byte),
+			outputs:      make(map[string]workflow.Output),
 		}
 
 		go d.dispatchEvents()
@@ -55,8 +59,21 @@ func (d dispatcher) dispatchEvents() {
 				continue
 			}
 
-			log.Info().Msgf("event dispatched: %s", string(data))
-			d.outputEvents <- data
+			for outputName, c := range d.outputEvents {
+				output, ok := d.outputs[outputName]
+				if !ok {
+					log.Warn().Msgf("output %s not found", outputName)
+					continue
+				}
+
+				match := output.Condition.Match(event)
+				if !match {
+					continue
+				}
+
+				log.Info().Msgf("event dispatched: %s to %s", data, outputName)
+				c <- data
+			}
 		}
 	}
 }
