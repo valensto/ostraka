@@ -5,8 +5,7 @@ import (
 	"encoding/json"
 	"github.com/go-chi/chi/v5"
 	"github.com/valensto/ostraka/internal/logger"
-	"net/http"
-
+	"github.com/valensto/ostraka/internal/server"
 	"github.com/valensto/ostraka/internal/workflow"
 )
 
@@ -22,7 +21,8 @@ type dispatcher struct {
 }
 
 func Dispatch(ctx context.Context, extractor extractor, port string) error {
-	router := chi.NewRouter()
+	s := server.New(port)
+
 	workflows, err := extractor.Extract(ctx)
 	if err != nil {
 		return err
@@ -31,7 +31,7 @@ func Dispatch(ctx context.Context, extractor extractor, port string) error {
 	for _, wf := range workflows {
 		d := &dispatcher{
 			workflow:     wf,
-			router:       router,
+			router:       s.Router,
 			inputEvents:  make(chan map[string]any, len(wf.Inputs)),
 			outputEvents: make(map[string]chan []byte),
 		}
@@ -49,7 +49,7 @@ func Dispatch(ctx context.Context, extractor extractor, port string) error {
 		}
 	}
 
-	return http.ListenAndServe(":"+port, router)
+	return s.Serve()
 }
 
 func (d dispatcher) dispatchEvents() {
