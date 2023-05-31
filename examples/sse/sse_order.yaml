@@ -1,25 +1,25 @@
 event:
-  type: json
+  format: json
   fields:
     - name: customerId
-      type: string
+      data_type: string
       required: true
     - name: orderNumber
-      type: int
+      data_type: int
       required: true
     - name: orderStatus
-      type: string
+      data_type: string
       required: true
     - name: nonRequiredField
-      type: string
+      data_type: string
 
 inputs:
   - name: webhook-orders
-    type: webhook
+    source: webhook
     params:
       endpoint: /webhook/orders
     decoder:
-      type: json
+      format: json
       mappers:
         - source: o_customer_id
           target: customerId
@@ -30,7 +30,7 @@ inputs:
 
 outputs:
   - name: sse-orders-completed
-    type: sse
+    destination: sse
     params:
       endpoint: /sse/orders/completed
     condition:
@@ -43,7 +43,7 @@ outputs:
           operator: eq
           value: "pending"
   - name: sse-orders-failed
-    type: sse
+    destination: sse
     params:
       endpoint: /sse/orders/failed
     condition:

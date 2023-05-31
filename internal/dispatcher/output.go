@@ -13,7 +13,6 @@ type OutputProvider interface {
 func (d dispatcher) registerOutputs() error {
 	for _, output := range d.workflow.Outputs {
 		d.outputEvents[output.Name] = make(chan []byte)
-		d.outputs[output.Name] = output
 
 		provider, err := d.getOutputProvider(output)
 		if err != nil {
@@ -24,17 +23,16 @@ func (d dispatcher) registerOutputs() error {
 		if err != nil {
 			return fmt.Errorf("error registering SSE output: %w", err)
 		}
-
 	}
 
 	return nil
 }
 
 func (d dispatcher) getOutputProvider(o workflow.Output) (OutputProvider, error) {
-	switch o.Type {
+	switch o.Destination {
 	case workflow.SSE:
 		return sse.New(o, d.router, d.outputEvents[o.Name])
 	default:
-		return nil, fmt.Errorf("unknown output type: %s", o.Type)
+		return nil, fmt.Errorf("unknown output type: %s", o.Destination)
 	}
 }

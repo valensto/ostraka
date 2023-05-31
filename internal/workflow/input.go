@@ -3,109 +3,76 @@ package workflow
 import (
 	"encoding/json"
 	"fmt"
-
-	"gopkg.in/yaml.v3"
 )
 
-const (
-	Webhook = "webhook"
-	MQTT    = "mqtt"
-)
+type Input struct {
+	Name    string
+	Source  Source
+	Decoder Decoder
+	params  any
+}
 
-type InputEvent map[string]any
-
-func (i InputEvent) MarshalJSON() ([]byte, error) {
-
-	b, err := json.Marshal(i)
+func UnmarshallInput(name, source string, decoder Decoder, params any, event *Event) (*Input, error) {
+	src, err := getSource(source)
 	if err != nil {
 		return nil, err
 	}
 
-	in := json.RawMessage(b)
-	return in.MarshalJSON()
-}
+	i := &Input{
+		Name:    name,
+		Source:  src,
+		Decoder: decoder,
+		params:  params,
+	}
 
-func (i *InputEvent) UnmarshalJSON(b []byte) error {
-	var in json.RawMessage
-	err := in.UnmarshalJSON(b)
+	err = i.unmarshallParams(event)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return json.Unmarshal(in, i)
+	return i, nil
 }
 
-type Input struct {
-	Name    string      `yaml:"name" validate:"required"`
-	Type    string      `yaml:"type" validate:"required"`
-	Decoder Decoder     `yaml:"decoder" validate:"required,dive,required"`
-	Params  interface{} `yaml:"params" validate:"required"`
-}
+func (i *Input) unmarshallParams(e *Event) error {
+	marshalled, err := json.Marshal(i.params)
+	if err != nil {
+		return fmt.Errorf("error marshalling input params: %w", err)
+	}
 
-type Decoder struct {
-	Type    string   `yaml:"type" validate:"required"`
-	Mappers []Mapper `yaml:"mappers" validate:"required,dive,required"`
-	event   Event    `yaml:"-"`
-}
-
-type Mapper struct {
-	Source string `yaml:"source" validate:"required"`
-	Target string `yaml:"target" validate:"required"`
-}
-
-type WebhookParams struct {
-	Endpoint string `yaml:"endpoint" validate:"required"`
-}
-
-type MQTTParams struct {
-	Broker        string `yaml:"broker" validate:"required"`
-	User          string `yaml:"user" validate:"required"`
-	Password      string `yaml:"password" validate:"required"`
-	Topic         string `yaml:"topic" validate:"required"`
-	AutoReconnect bool   `yaml:"autoreconnect" validate:"required"`
-	KeepAlive     bool   `yaml:"keepalive" validate:"required"`
-}
-
-func (wf *Workflow) setInputs() error {
-	var parsedInputs []Input
-
-	for _, input := range wf.Inputs {
-		marshalled, err := yaml.Marshal(input.Params)
+	var params parameter
+	switch i.Source {
+	case Webhook:
+		var wh WebhookParams
+		err = unmarshalParams(marshalled, &wh)
 		if err != nil {
-			return fmt.Errorf("error marshalling input params: %w", err)
+			return err
 		}
 
-		switch input.Type {
-		case Webhook:
-			var params WebhookParams
-			err := unmarshalParams(marshalled, &params)
-			if err != nil {
-				return err
-			}
-			input.Params = params
-
-		case MQTT:
-			var params MQTTParams
-			err := unmarshalParams(marshalled, &params)
-			if err != nil {
-				return err
-			}
-			input.Params = params
-
-		default:
-			return fmt.Errorf("unknown input type: %s", input.Type)
+		params = wh
+	case MQTT:
+		var mqtt MQTTParams
+		err = unmarshalParams(marshalled, &mqtt)
+		if err != nil {
+			return err
 		}
 
-		input.Decoder.event = wf.Event
-		parsedInputs = append(parsedInputs, input)
+		params = mqtt
+	default:
+		return fmt.Errorf("unknown input type: %s", i.Source)
 	}
 
-	wf.Inputs = parsedInputs
-	return nil
+	i.params = params
+	i.Decoder.event = e
+
+	return params.validate()
 }
 
-func (i Input) GetAsWebhookParams() (WebhookParams, error) {
-	params, ok := i.Params.(WebhookParams)
+func (i *Input) WebhookParams() (WebhookParams, error) {
+	if i.Source != Webhook {
+		return WebhookParams{}, fmt.Errorf("input source is not Webhook")
+	}
+
+	params, ok := i.params.(WebhookParams)
 	if !ok {
 		return WebhookParams{}, fmt.Errorf("input params are not of type WebhookParams")
 	}
@@ -113,56 +80,15 @@ func (i Input) GetAsWebhookParams() (WebhookParams, error) {
 	return params, nil
 }
 
-func (i Input) GetAsMQTTParams() (MQTTParams, error) {
-	params, ok := i.Params.(MQTTParams)
+func (i *Input) MQTTParams() (MQTTParams, error) {
+	if i.Source != MQTT {
+		return MQTTParams{}, fmt.Errorf("input source is not MQTT")
+	}
+
+	params, ok := i.params.(MQTTParams)
 	if !ok {
 		return MQTTParams{}, fmt.Errorf("input params are not of type MQTTParams")
 	}
 
 	return params, nil
-}
-
-func (d Decoder) Decode(data []byte) (map[string]any, error) {
-	if d.Type != "json" {
-		return nil, fmt.Errorf("unknown decoder type: %s", d.Type)
-	}
-
-	var source map[string]any
-	err := json.Unmarshal(data, &source)
-	if err != nil {
-		return nil, fmt.Errorf("error decoding message: %w", err)
-	}
-
-	var decoded = map[string]any{}
-	for _, field := range d.event.Fields {
-		sf, ok := d.findSourceField(field.Name)
-		if !ok && field.Required {
-			return nil, fmt.Errorf("required field %s not found", field.Name)
-		}
-
-		v, ok := source[sf]
-		if !ok && field.Required {
-			return nil, fmt.Errorf("required field %s not found", field.Name)
-		}
-
-		// TODO: check field type
-		/*_, ok = value.(field.Type)
-		if !ok {
-			return nil, fmt.Errorf("field %s is not of type %s", field.Name, field.Type)
-		}*/
-
-		decoded[field.Name] = v
-	}
-
-	return decoded, nil
-}
-
-func (d Decoder) findSourceField(target string) (source string, found bool) {
-	for _, mapper := range d.Mappers {
-		if mapper.Target == target {
-			return mapper.Source, true
-		}
-	}
-
-	return "", false
 }

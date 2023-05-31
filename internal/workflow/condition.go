@@ -1,10 +1,49 @@
 package workflow
 
+import "fmt"
+
 type Condition struct {
-	Field      string      `yaml:"field,omitempty"`
-	Operator   string      `yaml:"operator"`
-	Value      any         `yaml:"value,omitempty"`
-	Conditions []Condition `yaml:"conditions,omitempty"`
+	field      string
+	operator   operator
+	value      any
+	conditions []*Condition
+}
+
+func NewCondition(field, operator string, value any, conditions ...*Condition) (*Condition, error) {
+	op, err := getOperator(operator)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(conditions) > 0 && !op.isTopOperator() {
+		return nil, fmt.Errorf("invalid top operator %s", operator)
+	}
+
+	if len(conditions) > 0 {
+		return &Condition{
+			operator:   op,
+			conditions: conditions,
+		}, nil
+	}
+
+	if len(conditions) == 0 && field == "" {
+		return nil, fmt.Errorf("invalid condition: field is empty")
+	}
+
+	if len(conditions) == 0 && operator == "" {
+		return nil, fmt.Errorf("invalid condition: operator is empty")
+	}
+
+	if len(conditions) == 0 && value == nil {
+		return nil, fmt.Errorf("invalid condition: value is empty")
+	}
+
+	return &Condition{
+		field:      field,
+		operator:   op,
+		value:      value,
+		conditions: conditions,
+	}, nil
 }
 
 func (c *Condition) Match(source map[string]any) bool {
@@ -12,18 +51,18 @@ func (c *Condition) Match(source map[string]any) bool {
 		return true
 	}
 
-	if len(c.Conditions) > 0 {
-		switch c.Operator {
-		case "and":
-			for _, subCondition := range c.Conditions {
+	if len(c.conditions) > 0 {
+		switch c.operator {
+		case And:
+			for _, subCondition := range c.conditions {
 				if !subCondition.Match(source) {
 					return false
 				}
 			}
 			return true
 
-		case "or":
-			for _, subCondition := range c.Conditions {
+		case Or:
+			for _, subCondition := range c.conditions {
 				if subCondition.Match(source) {
 					return true
 				}
@@ -39,32 +78,28 @@ func (c *Condition) Match(source map[string]any) bool {
 }
 
 func (c *Condition) matchOperator(source map[string]any) bool {
-	v, ok := source[c.Field]
+	v, ok := source[c.field]
 	if !ok {
 		return false
 	}
 
-	switch c.Operator {
-	case "eq":
-		return v == c.Value
-	case "ne":
-		return v != c.Value
-	case "gt", "lt", "gte", "lte":
-		return compareNumbers(v, c.Value, c.Operator)
-	case "in":
-		return containsValue(c.Value, v)
-	case "nin":
-		return !containsValue(c.Value, v)
-	case "exists":
-		return v != nil
-	case "nexists":
-		return v == nil
+	switch c.operator {
+	case Eq:
+		return v == c.value
+	case Ne:
+		return v != c.value
+	case Gt, Lt, Gte, Lte:
+		return compareNumbers(v, c.value, c.operator)
+	case In:
+		return containsValue(c.value, v)
+	case Nin:
+		return !containsValue(c.value, v)
 	default:
 		return false
 	}
 }
 
-func compareNumbers(a, b any, operator string) bool {
+func compareNumbers(a, b any, operator operator) bool {
 	na, ok := a.(int)
 	if !ok {
 		return false
@@ -76,13 +111,13 @@ func compareNumbers(a, b any, operator string) bool {
 	}
 
 	switch operator {
-	case "gt":
+	case Gt:
 		return na > nb
-	case "lt":
+	case Lt:
 		return na < nb
-	case "gte":
+	case Gte:
 		return na >= nb
-	case "lte":
+	case Lte:
 		return na <= nb
 	default:
 		return false
@@ -90,7 +125,7 @@ func compareNumbers(a, b any, operator string) bool {
 }
 
 func containsValue(values any, value any) bool {
-	arr, ok := values.([]interface{})
+	arr, ok := values.([]any)
 	if !ok {
 		return false
 	}

@@ -1,25 +1,24 @@
 package main
 
 import (
-	"github.com/rs/zerolog/log"
+	"context"
+	"github.com/valensto/ostraka/internal/config/static/local"
 	"github.com/valensto/ostraka/internal/dispatcher"
-	"github.com/valensto/ostraka/internal/workflow"
-	"github.com/valensto/ostraka/logger"
+	"github.com/valensto/ostraka/internal/logger"
 )
 
 func main() {
 	port := "4000"
 	logger.Banner(port)
+
 	if err := run(port); err != nil {
-		log.Fatal().Msg(err.Error())
+		logger.Get().Fatal().Msg(err.Error())
 	}
 }
 
 func run(port string) error {
-	workflows, err := workflow.Build(".ostraka/workflows")
-	if err != nil {
-		return err
-	}
+	ctx := context.Background()
+	extractor := local.New(".ostraka/workflows")
 
-	return dispatcher.Dispatch(workflows, port)
+	return dispatcher.Dispatch(ctx, extractor, port)
 }

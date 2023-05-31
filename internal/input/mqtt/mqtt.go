@@ -3,13 +3,13 @@ package mqtt
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/valensto/ostraka/internal/logger"
 	"time"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/google/uuid"
 
 	"github.com/valensto/ostraka/internal/workflow"
-	"github.com/valensto/ostraka/logger"
 )
 
 type Client struct {
@@ -21,7 +21,7 @@ type Client struct {
 }
 
 func New(input workflow.Input, events chan<- map[string]any) (*Client, error) {
-	params, err := input.GetAsMQTTParams()
+	params, err := input.MQTTParams()
 	if err != nil {
 		return nil, err
 	}

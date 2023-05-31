@@ -1,57 +1,68 @@
 package workflow
 
 import (
+	"encoding/json"
 	"fmt"
-	"gopkg.in/yaml.v3"
-)
-
-const (
-	SSE = "sse"
 )
 
 type Output struct {
-	Name      string      `yaml:"name" validate:"required"`
-	Type      string      `yaml:"type" validate:"required"`
-	Params    interface{} `yaml:"params" validate:"required"`
-	Condition *Condition  `yaml:"condition,omitempty"`
+	Name        string
+	Destination Destination
+	Condition   *Condition
+	params      any
 }
 
-type SSEParams struct {
-	Endpoint string `yaml:"endpoint" validate:"required"`
-	Auth     Auth   `yaml:"auth" validate:"omitempty"`
-}
-
-func (wf *Workflow) setOutputs() error {
-	var parsedOutputs []Output
-
-	for _, output := range wf.Outputs {
-		marshalled, err := yaml.Marshal(output.Params)
-		if err != nil {
-			return fmt.Errorf("error marshalling output params: %w", err)
-		}
-
-		switch output.Type {
-		case SSE:
-			var params SSEParams
-			err := unmarshalParams(marshalled, &params)
-			if err != nil {
-				return err
-			}
-			output.Params = params
-
-		default:
-			return fmt.Errorf("unknown output type: %s", output.Type)
-		}
-
-		parsedOutputs = append(parsedOutputs, output)
+func UnmarshallOutput(name, destination string, condition *Condition, params any) (*Output, error) {
+	if name == "" {
+		return nil, fmt.Errorf("output name is empty")
 	}
 
-	wf.Outputs = parsedOutputs
-	return nil
+	dest, err := getDestination(destination)
+	if err != nil {
+		return nil, err
+	}
+
+	o := Output{
+		Name:        name,
+		Destination: dest,
+		Condition:   condition,
+		params:      params,
+	}
+
+	err = o.unmarshallParams()
+	if err != nil {
+		return nil, err
+	}
+
+	return &o, nil
 }
 
-func (o Output) ToSSEParams() (SSEParams, error) {
-	params, ok := o.Params.(SSEParams)
+func (o *Output) unmarshallParams() error {
+	marshalled, err := json.Marshal(o.params)
+	if err != nil {
+		return fmt.Errorf("error marshalling output params: %w", err)
+	}
+
+	var params parameter
+	switch o.Destination {
+	case SSE:
+		var sse SSEParams
+		err = unmarshalParams(marshalled, &sse)
+		if err != nil {
+			return err
+		}
+
+		params = sse
+	default:
+		return fmt.Errorf("unknown output type: %s", o.Destination)
+	}
+
+	o.params = params
+	return params.validate()
+}
+
+func (o *Output) SSEParams() (SSEParams, error) {
+	params, ok := o.params.(SSEParams)
 	if !ok {
 		return SSEParams{}, fmt.Errorf("output params are not of type SSEParams")
 	}

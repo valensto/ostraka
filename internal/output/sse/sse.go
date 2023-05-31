@@ -3,12 +3,11 @@ package sse
 import (
 	"bytes"
 	"fmt"
+	"github.com/go-chi/chi/v5"
+	"github.com/valensto/ostraka/internal/logger"
 	"net/http"
 
-	"github.com/go-chi/chi/v5"
-
 	"github.com/valensto/ostraka/internal/workflow"
-	"github.com/valensto/ostraka/logger"
 )
 
 type Output struct {
@@ -25,7 +24,7 @@ type Output struct {
 type client chan []byte
 
 func New(output workflow.Output, router *chi.Mux, events <-chan []byte) (*Output, error) {
-	params, err := output.ToSSEParams()
+	params, err := output.SSEParams()
 	if err != nil {
 		return nil, err
 	}

@@ -1,12 +1,12 @@
 package workflow
 
 type Auth struct {
-	Type    string  `yaml:"type"`
-	Secret  string  `yaml:"secret"`
-	Encoder Encoder `yaml:"encoder"`
+	Type    string  `json:"type"`
+	Secret  string  `json:"secret"`
+	Encoder Encoder `json:"encoder"`
 }
 
 type Encoder struct {
-	Type   string  `yaml:"type"`
-	Fields []Field `yaml:"fields"`
+	Type   string  `json:"type"`
+	Fields []Field `json:"fields"`
 }
