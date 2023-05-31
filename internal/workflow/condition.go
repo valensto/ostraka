@@ -94,10 +94,6 @@ func (c *Condition) matchOperator(source map[string]any) bool {
 		return containsValue(c.value, v)
 	case Nin:
 		return !containsValue(c.value, v)
-	case Exists:
-		return v != nil
-	case Nexists:
-		return v == nil
 	default:
 		return false
 	}
