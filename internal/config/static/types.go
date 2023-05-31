@@ -21,7 +21,7 @@ type staticInput struct {
 	Name    string        `yaml:"name"   validate:"required"`
 	Source  string        `yaml:"source"   validate:"required"`
 	Decoder staticDecoder `yaml:"decoder"   validate:"required,dive,required"`
-	Params  interface{}   `yaml:"params"   validate:"required"`
+	Params  any           `yaml:"params"   validate:"required"`
 }
 
 type staticDecoder struct {
@@ -37,7 +37,7 @@ type staticMapper struct {
 type staticOutput struct {
 	Name        string           `yaml:"name"   validate:"required"`
 	Destination string           `yaml:"destination"   validate:"required"`
-	Params      interface{}      `yaml:"params"   validate:"required"`
+	Params      any              `yaml:"params"   validate:"required"`
 	Condition   *staticCondition `yaml:"condition,omitempty" `
 }
 

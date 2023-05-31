@@ -9,10 +9,10 @@ type Input struct {
 	Name    string
 	Source  Source
 	Decoder Decoder
-	params  interface{}
+	params  any
 }
 
-func UnmarshallInput(name, source string, decoder Decoder, params interface{}, event *Event) (*Input, error) {
+func UnmarshallInput(name, source string, decoder Decoder, params any, event *Event) (*Input, error) {
 	src, err := getSource(source)
 	if err != nil {
 		return nil, err
@@ -31,19 +31,6 @@ func UnmarshallInput(name, source string, decoder Decoder, params interface{}, e
 	}
 
 	return i, nil
-}
-
-type WebhookParams struct {
-	Endpoint string `json:"endpoint"`
-}
-
-type MQTTParams struct {
-	Broker        string `json:"broker"`
-	User          string `json:"user"`
-	Password      string `json:"password"`
-	Topic         string `json:"topic"`
-	AutoReconnect bool   `json:"autoReconnect"`
-	KeepAlive     bool   `json:"keepAlive"`
 }
 
 func (i *Input) unmarshallParams(e *Event) error {
@@ -93,14 +80,6 @@ func (i *Input) WebhookParams() (WebhookParams, error) {
 	return params, nil
 }
 
-func (w WebhookParams) validate() error {
-	if w.Endpoint == "" {
-		return fmt.Errorf("webhook endpoint is empty")
-	}
-
-	return nil
-}
-
 func (i *Input) MQTTParams() (MQTTParams, error) {
 	if i.Source != MQTT {
 		return MQTTParams{}, fmt.Errorf("input source is not MQTT")
@@ -112,24 +91,4 @@ func (i *Input) MQTTParams() (MQTTParams, error) {
 	}
 
 	return params, nil
-}
-
-func (mqtt MQTTParams) validate() error {
-	if mqtt.Broker == "" {
-		return fmt.Errorf("mqtt broker is empty")
-	}
-
-	if mqtt.Topic == "" {
-		return fmt.Errorf("mqtt topic is empty")
-	}
-
-	if mqtt.User == "" {
-		return fmt.Errorf("mqtt user is empty")
-	}
-
-	if mqtt.Password == "" {
-		return fmt.Errorf("mqtt password is empty")
-	}
-
-	return nil
 }

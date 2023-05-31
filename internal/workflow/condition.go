@@ -129,7 +129,7 @@ func compareNumbers(a, b any, operator operator) bool {
 }
 
 func containsValue(values any, value any) bool {
-	arr, ok := values.([]interface{})
+	arr, ok := values.([]any)
 	if !ok {
 		return false
 	}

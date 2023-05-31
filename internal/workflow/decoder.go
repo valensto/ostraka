@@ -6,8 +6,8 @@ import (
 )
 
 type Decoder struct {
-	Format  string
-	Mappers []Mapper
+	format  Format
+	mappers []Mapper
 	event   *Event
 }
 
@@ -16,9 +16,21 @@ type Mapper struct {
 	Target string
 }
 
+func UnmarshallDecoder(format string, mappers []Mapper) (*Decoder, error) {
+	f, err := getFormat(format)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Decoder{
+		format:  f,
+		mappers: mappers,
+	}, nil
+}
+
 func (d Decoder) Decode(data []byte) (map[string]any, error) {
-	if d.Format != "json" {
-		return nil, fmt.Errorf("unknown decoder type: %s", d.Format)
+	if d.format != "json" {
+		return nil, fmt.Errorf("unknown decoder type: %s", d.format)
 	}
 
 	var source map[string]any
@@ -29,7 +41,7 @@ func (d Decoder) Decode(data []byte) (map[string]any, error) {
 
 	var decoded = map[string]any{}
 	for _, field := range d.event.fields {
-		sf, ok := d.findSourceField(field.name)
+		sf, ok := d.getSourceFieldByTarget(field.name)
 		if !ok && field.required {
 			return nil, fmt.Errorf("required field %s not found", field.name)
 		}
@@ -45,8 +57,8 @@ func (d Decoder) Decode(data []byte) (map[string]any, error) {
 	return decoded, nil
 }
 
-func (d Decoder) findSourceField(target string) (source string, found bool) {
-	for _, mapper := range d.Mappers {
+func (d Decoder) getSourceFieldByTarget(target string) (source string, found bool) {
+	for _, mapper := range d.mappers {
 		if mapper.Target == target {
 			return mapper.Source, true
 		}

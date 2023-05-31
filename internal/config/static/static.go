@@ -93,12 +93,12 @@ func (si staticInput) toInput(event *workflow.Event) (*workflow.Input, error) {
 		})
 	}
 
-	decoder := workflow.Decoder{
-		Format:  si.Decoder.Format,
-		Mappers: mappers,
+	decoder, err := workflow.UnmarshallDecoder(si.Decoder.Format, mappers)
+	if err != nil {
+		return nil, err
 	}
 
-	return workflow.UnmarshallInput(si.Name, si.Source, decoder, si.Params, event)
+	return workflow.UnmarshallInput(si.Name, si.Source, *decoder, si.Params, event)
 }
 
 func (so staticOutput) toOutput() (*workflow.Output, error) {

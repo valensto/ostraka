@@ -37,11 +37,6 @@ func UnmarshallOutput(name, destination string, condition *Condition, params any
 	return &o, nil
 }
 
-type SSEParams struct {
-	Endpoint string `json:"endpoint"`
-	Auth     Auth   `json:"auth,omitempty"`
-}
-
 func (o *Output) unmarshallParams() error {
 	marshalled, err := json.Marshal(o.params)
 	if err != nil {
@@ -64,14 +59,6 @@ func (o *Output) unmarshallParams() error {
 
 	o.params = params
 	return params.validate()
-}
-
-func (sse SSEParams) validate() error {
-	if sse.Endpoint == "" {
-		return fmt.Errorf("sse endpoint is empty")
-	}
-
-	return nil
 }
 
 func (o *Output) SSEParams() (SSEParams, error) {
