@@ -31,7 +31,7 @@ func (d dispatcher) registerOutputs() error {
 func (d dispatcher) getOutputProvider(o workflow.Output) (OutputProvider, error) {
 	switch o.Destination {
 	case workflow.SSE:
-		return sse.New(o, d.router, d.outputEvents[o.Name])
+		return sse.New(o, d.server, d.outputEvents[o.Name])
 	default:
 		return nil, fmt.Errorf("unknown output type: %s", o.Destination)
 	}

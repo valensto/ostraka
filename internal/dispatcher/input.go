@@ -31,7 +31,7 @@ func (d dispatcher) subscribeInputs() error {
 func (d dispatcher) getInputProvider(i workflow.Input) (InputProvider, error) {
 	switch i.Source {
 	case workflow.Webhook:
-		return webhook.New(i, d.router, d.inputEvents)
+		return webhook.New(i, d.server, d.inputEvents)
 	case workflow.MQTT:
 		return mqtt.New(i, d.inputEvents)
 	default:

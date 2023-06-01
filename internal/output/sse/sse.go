@@ -3,15 +3,15 @@ package sse
 import (
 	"bytes"
 	"fmt"
-	"github.com/go-chi/chi/v5"
 	"github.com/valensto/ostraka/internal/logger"
+	"github.com/valensto/ostraka/internal/server"
 	"net/http"
 
 	"github.com/valensto/ostraka/internal/workflow"
 )
 
 type Output struct {
-	router        *chi.Mux
+	server        *server.Server
 	name          string
 	params        workflow.SSEParams
 	clients       map[client]bool
@@ -23,14 +23,14 @@ type Output struct {
 
 type client chan []byte
 
-func New(output workflow.Output, router *chi.Mux, events <-chan []byte) (*Output, error) {
+func New(output workflow.Output, server *server.Server, events <-chan []byte) (*Output, error) {
 	params, err := output.SSEParams()
 	if err != nil {
 		return nil, err
 	}
 
 	o := &Output{
-		router:        router,
+		server:        server,
 		name:          output.Name,
 		params:        params,
 		clients:       make(map[client]bool),
@@ -45,7 +45,17 @@ func New(output workflow.Output, router *chi.Mux, events <-chan []byte) (*Output
 }
 
 func (o *Output) Register() error {
-	o.router.Get(o.params.Endpoint, o.endpoint())
+	endpoint := server.Endpoint{
+		Method:  server.GET,
+		Path:    o.params.Endpoint,
+		Handler: o.endpoint(),
+	}
+
+	err := o.server.AddSubRouter(endpoint)
+	if err != nil {
+		return err
+	}
+
 	logger.Get().Info().Msgf("output %s of type SSE registered. Sending to endpoint %s", o.name, o.params.Endpoint)
 	return nil
 }
@@ -55,7 +65,7 @@ func (o *Output) endpoint() http.HandlerFunc {
 		fl, ok := w.(http.Flusher)
 		if !ok {
 			logger.Get().Error().Msg("error flushing response writer: flushing not supported")
-			http.Error(w, "Flushing not supported", http.StatusNotImplemented)
+			o.server.Respond(w, r, http.StatusNotImplemented, nil)
 			return
 		}
 

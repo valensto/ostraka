@@ -1,8 +1,8 @@
 package webhook
 
 import (
-	"github.com/go-chi/chi/v5"
 	"github.com/valensto/ostraka/internal/logger"
+	"github.com/valensto/ostraka/internal/server"
 	"io"
 	"net/http"
 
@@ -10,20 +10,20 @@ import (
 )
 
 type Input struct {
-	router *chi.Mux
+	server *server.Server
 	workflow.Input
 	params workflow.WebhookParams
 	events chan<- map[string]any
 }
 
-func New(input workflow.Input, router *chi.Mux, events chan<- map[string]any) (*Input, error) {
+func New(input workflow.Input, server *server.Server, events chan<- map[string]any) (*Input, error) {
 	params, err := input.WebhookParams()
 	if err != nil {
 		return nil, err
 	}
 
 	return &Input{
-		router: router,
+		server: server,
 		Input:  input,
 		params: params,
 		events: events,
@@ -31,7 +31,16 @@ func New(input workflow.Input, router *chi.Mux, events chan<- map[string]any) (*
 }
 
 func (i *Input) Subscribe() error {
-	i.router.Post(i.params.Endpoint, i.endpoint())
+	endpoint := server.Endpoint{
+		Method:  server.POST,
+		Path:    i.params.Endpoint,
+		Handler: i.endpoint(),
+	}
+
+	err := i.server.AddSubRouter(endpoint)
+	if err != nil {
+		return err
+	}
 
 	logger.Get().Info().Msgf("input %s of type webhook registered. Listening from endpoint %s", i.Name, i.params.Endpoint)
 	return nil

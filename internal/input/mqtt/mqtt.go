@@ -12,7 +12,7 @@ import (
 	"github.com/valensto/ostraka/internal/workflow"
 )
 
-type Client struct {
+type Input struct {
 	client    mqtt.Client
 	connected chan bool
 	params    workflow.MQTTParams
@@ -20,7 +20,7 @@ type Client struct {
 	events    chan<- map[string]any
 }
 
-func New(input workflow.Input, events chan<- map[string]any) (*Client, error) {
+func New(input workflow.Input, events chan<- map[string]any) (*Input, error) {
 	params, err := input.MQTTParams()
 	if err != nil {
 		return nil, err
@@ -42,7 +42,7 @@ func New(input workflow.Input, events chan<- map[string]any) (*Client, error) {
 		return nil, fmt.Errorf("error connecting to mqtt broker: %w", token.Error())
 	}
 
-	c := &Client{
+	c := &Input{
 		inputName: input.Name,
 		params:    params,
 		events:    events,
@@ -57,7 +57,7 @@ func New(input workflow.Input, events chan<- map[string]any) (*Client, error) {
 	return c, nil
 }
 
-func (c *Client) keepalive() {
+func (c *Input) keepalive() {
 	const period = 2 * time.Second
 	var up, closed bool
 	log := logger.Get()
@@ -83,7 +83,7 @@ func (c *Client) keepalive() {
 
 }
 
-func (c *Client) Subscribe() error {
+func (c *Input) Subscribe() error {
 	token := c.client.Subscribe(c.params.Topic, 1, c.eventPubHandler())
 	token.Wait()
 
@@ -95,7 +95,7 @@ func (c *Client) Subscribe() error {
 	return nil
 }
 
-func (c *Client) eventPubHandler() mqtt.MessageHandler {
+func (c *Input) eventPubHandler() mqtt.MessageHandler {
 	return func(client mqtt.Client, msg mqtt.Message) {
 		var data map[string]any
 		err := json.Unmarshal(msg.Payload(), &data)
@@ -121,12 +121,12 @@ var connectLostHandler mqtt.ConnectionLostHandler = func(client mqtt.Client, err
 	logger.Get().Warn().Msgf("Connection lost: %v", err)
 }
 
-func (c *Client) Disconnect() {
+func (c *Input) Disconnect() {
 	c.client.Disconnect(500)
 	close(c.connected)
 }
 
-func (c *Client) Connect() error {
+func (c *Input) Connect() error {
 	if c.client.IsConnected() {
 		return nil
 	}

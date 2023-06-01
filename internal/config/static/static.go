@@ -54,7 +54,7 @@ func (sw workflowModel) toWorkflow() (*workflow.Workflow, error) {
 		}
 	}
 
-	return workflow.New(inputs, outputs)
+	return workflow.New(sw.Name, inputs, outputs)
 }
 
 func (sc conditionModel) toCondition() (*workflow.Condition, error) {

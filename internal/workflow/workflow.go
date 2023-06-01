@@ -1,12 +1,20 @@
 package workflow
 
+import "fmt"
+
 type Workflow struct {
+	Name    string
 	Inputs  map[string]Input
 	Outputs map[string]Output
 }
 
-func New(inputs []*Input, outputs []*Output) (*Workflow, error) {
+func New(name string, inputs []*Input, outputs []*Output) (*Workflow, error) {
+	if name == "" {
+		return nil, fmt.Errorf("workflow name is empty")
+	}
+
 	wf := Workflow{
+		Name:    name,
 		Inputs:  make(map[string]Input),
 		Outputs: make(map[string]Output),
 	}

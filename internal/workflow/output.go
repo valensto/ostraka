@@ -5,6 +5,10 @@ import (
 	"fmt"
 )
 
+type outputType interface {
+	SSEParams
+}
+
 type Output struct {
 	Name        string
 	Destination Destination
