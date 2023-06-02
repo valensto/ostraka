@@ -90,7 +90,7 @@ func (c *MQTT) Subscribe(events chan<- map[string]any) error {
 
 func (c *MQTT) Register(events <-chan []byte) error {
 	l := logger.Get()
-	l.Info().Msgf("input %s of type MQTT registered. Listening from topic %s", c.name, c.params.Topic)
+	l.Info().Msgf("output %s of type MQTT registered. Publishing to topic %s", c.name, c.params.Topic)
 
 	go func() {
 		for {
