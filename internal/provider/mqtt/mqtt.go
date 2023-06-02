@@ -92,16 +92,20 @@ func (c *MQTT) Register(events <-chan []byte) error {
 	l := logger.Get()
 	l.Info().Msgf("input %s of type MQTT registered. Listening from topic %s", c.name, c.params.Topic)
 
-	for {
-		select {
-		case event := <-events:
-			token := c.client.Publish(c.params.Topic, 1, false, event)
-			token.Wait()
-			if token.Error() != nil {
-				l.Error().Msgf("error publishing to topic: %s", c.params.Topic)
+	go func() {
+		for {
+			select {
+			case event := <-events:
+				token := c.client.Publish(c.params.Topic, 1, false, event)
+				token.Wait()
+				if token.Error() != nil {
+					l.Error().Msgf("error publishing to topic: %s", c.params.Topic)
+				}
 			}
 		}
-	}
+	}()
+
+	return nil
 }
 
 func (c *MQTT) eventPubHandler(events chan<- map[string]any) mqtt.MessageHandler {
