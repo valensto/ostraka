@@ -9,18 +9,14 @@ import {
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MainNav } from "@/components/dashboard/main-nav";
-import {EventsTable} from "@/components/dashboard/events-table";
-
+import { EventsTable } from "@/components/dashboard/events-table";
 
 export default function App() {
   return (
     <>
       <div className="hidden flex-col md:flex">
         <div className="border-b">
-          <div className="flex h-16 items-center px-4">
-            <MainNav className="mx-6" />
-            <div className="ml-auto flex items-center space-x-4"></div>
-          </div>
+          <MainNav className="mx-6" />
         </div>
         <div className="flex-1 space-y-4 p-8 pt-6">
           <div className="flex items-center justify-between space-y-2">
@@ -78,7 +74,7 @@ export default function App() {
               </CardContent>
             </Card>
           </div>
-          <Tabs defaultValue="overview" className="space-y-4">
+          <Tabs defaultValue="orders" className="space-y-4">
             <TabsList>
               <TabsTrigger value="orders">Orders</TabsTrigger>
               <TabsTrigger value="new-customers">New customers</TabsTrigger>

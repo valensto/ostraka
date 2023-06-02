@@ -3,6 +3,7 @@ package server
 import (
 	"encoding/json"
 	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 	"github.com/valensto/ostraka/internal/logger"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
@@ -15,8 +16,12 @@ type Server struct {
 }
 
 func New(port string) *Server {
+	mux := chi.NewRouter()
+	mux.Use(middleware.Recoverer)
+	mux.Use(middleware.Logger)
+
 	return &Server{
-		Router: chi.NewRouter(),
+		Router: mux,
 		port:   port,
 	}
 }

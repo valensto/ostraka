@@ -1,0 +1,7 @@
+dist/
+site/
+vendor/
+.idea/
+examples/
+.github/
+Makefile
