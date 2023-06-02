@@ -12,20 +12,14 @@ import (
 	"github.com/valensto/ostraka/internal/workflow"
 )
 
-type Input struct {
+type MQTT struct {
 	client    mqtt.Client
 	connected chan bool
 	params    workflow.MQTTParams
-	inputName string
-	events    chan<- map[string]any
+	name      string
 }
 
-func New(input workflow.Input, events chan<- map[string]any) (*Input, error) {
-	params, err := input.MQTTParams()
-	if err != nil {
-		return nil, err
-	}
-
+func New(name string, params workflow.MQTTParams) (*MQTT, error) {
 	opts := mqtt.NewClientOptions()
 	opts.AddBroker(params.Broker)
 	opts.SetClientID(fmt.Sprintf("%s-%s", uuid.New(), "ostraka"))
@@ -42,10 +36,9 @@ func New(input workflow.Input, events chan<- map[string]any) (*Input, error) {
 		return nil, fmt.Errorf("error connecting to mqtt broker: %w", token.Error())
 	}
 
-	c := &Input{
-		inputName: input.Name,
+	c := &MQTT{
+		name:      name,
 		params:    params,
-		events:    events,
 		client:    client,
 		connected: make(chan bool),
 	}
@@ -57,7 +50,7 @@ func New(input workflow.Input, events chan<- map[string]any) (*Input, error) {
 	return c, nil
 }
 
-func (c *Input) keepalive() {
+func (c *MQTT) keepalive() {
 	const period = 2 * time.Second
 	var up, closed bool
 	log := logger.Get()
@@ -73,9 +66,9 @@ func (c *Input) keepalive() {
 				continue
 			}
 
-			logger.Get().Info().Msgf("%s send mqtt keep-alive", c.inputName)
+			logger.Get().Info().Msgf("%s send mqtt keep-alive", c.name)
 			if token := c.client.Publish("ping_topic", 0, false, "ping"); token.Wait() && token.Error() != nil {
-				log.Warn().Msgf("%s mqtt keep-alive failed: %s", c.inputName, token.Error())
+				log.Warn().Msgf("%s mqtt keep-alive failed: %s", c.name, token.Error())
 			}
 			break
 		}
@@ -83,19 +76,35 @@ func (c *Input) keepalive() {
 
 }
 
-func (c *Input) Subscribe() error {
-	token := c.client.Subscribe(c.params.Topic, 1, c.eventPubHandler())
+func (c *MQTT) Subscribe(events chan<- map[string]any) error {
+	token := c.client.Subscribe(c.params.Topic, 1, c.eventPubHandler(events))
 	token.Wait()
 
 	if token.Error() != nil {
 		return fmt.Errorf("error subscribing to topic: %s", c.params.Topic)
 	}
 
-	logger.Get().Info().Msgf("input %s of type MQTT registered. Listening from topic %s", c.inputName, c.params.Topic)
+	logger.Get().Info().Msgf("input %s of type MQTT registered. Listening from topic %s", c.name, c.params.Topic)
 	return nil
 }
 
-func (c *Input) eventPubHandler() mqtt.MessageHandler {
+func (c *MQTT) Register(events <-chan []byte) error {
+	l := logger.Get()
+	l.Info().Msgf("input %s of type MQTT registered. Listening from topic %s", c.name, c.params.Topic)
+
+	for {
+		select {
+		case event := <-events:
+			token := c.client.Publish(c.params.Topic, 1, false, event)
+			token.Wait()
+			if token.Error() != nil {
+				l.Error().Msgf("error publishing to topic: %s", c.params.Topic)
+			}
+		}
+	}
+}
+
+func (c *MQTT) eventPubHandler(events chan<- map[string]any) mqtt.MessageHandler {
 	return func(client mqtt.Client, msg mqtt.Message) {
 		var data map[string]any
 		err := json.Unmarshal(msg.Payload(), &data)
@@ -104,7 +113,7 @@ func (c *Input) eventPubHandler() mqtt.MessageHandler {
 			return
 		}
 
-		c.events <- data
+		events <- data
 		logger.Get().Info().Msgf("Received message: %s from topic: %s", msg.Payload(), msg.Topic())
 	}
 }
@@ -121,12 +130,12 @@ var connectLostHandler mqtt.ConnectionLostHandler = func(client mqtt.Client, err
 	logger.Get().Warn().Msgf("Connection lost: %v", err)
 }
 
-func (c *Input) Disconnect() {
+func (c *MQTT) Disconnect() {
 	c.client.Disconnect(500)
 	close(c.connected)
 }
 
-func (c *Input) Connect() error {
+func (c *MQTT) Connect() error {
 	if c.client.IsConnected() {
 		return nil
 	}

@@ -10,7 +10,7 @@ import (
 	"github.com/valensto/ostraka/internal/workflow"
 )
 
-type Output struct {
+type SSE struct {
 	server        *server.Server
 	name          string
 	params        workflow.SSEParams
@@ -23,13 +23,13 @@ type Output struct {
 
 type client chan []byte
 
-func New(output workflow.Output, server *server.Server, events <-chan []byte) (*Output, error) {
+func New(output workflow.Output, server *server.Server) (*SSE, error) {
 	params, err := output.SSEParams()
 	if err != nil {
 		return nil, err
 	}
 
-	o := &Output{
+	o := &SSE{
 		server:        server,
 		name:          output.Name,
 		params:        params,
@@ -40,16 +40,17 @@ func New(output workflow.Output, server *server.Server, events <-chan []byte) (*
 		eventCounter:  0,
 	}
 
-	o.listen(events)
 	return o, nil
 }
 
-func (o *Output) Register() error {
+func (o *SSE) Register(events <-chan []byte) error {
 	endpoint := server.Endpoint{
 		Method:  server.GET,
 		Path:    o.params.Endpoint,
 		Handler: o.endpoint(),
 	}
+
+	o.listen(events)
 
 	err := o.server.AddSubRouter(endpoint)
 	if err != nil {
@@ -60,7 +61,7 @@ func (o *Output) Register() error {
 	return nil
 }
 
-func (o *Output) endpoint() http.HandlerFunc {
+func (o *SSE) endpoint() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		fl, ok := w.(http.Flusher)
 		if !ok {
@@ -95,7 +96,7 @@ func (o *Output) endpoint() http.HandlerFunc {
 	}
 }
 
-func (o *Output) listen(events <-chan []byte) {
+func (o *SSE) listen(events <-chan []byte) {
 	go func() {
 		for {
 			select {

@@ -13,10 +13,9 @@ type Input struct {
 	server *server.Server
 	workflow.Input
 	params workflow.WebhookParams
-	events chan<- map[string]any
 }
 
-func New(input workflow.Input, server *server.Server, events chan<- map[string]any) (*Input, error) {
+func New(input workflow.Input, server *server.Server) (*Input, error) {
 	params, err := input.WebhookParams()
 	if err != nil {
 		return nil, err
@@ -26,15 +25,14 @@ func New(input workflow.Input, server *server.Server, events chan<- map[string]a
 		server: server,
 		Input:  input,
 		params: params,
-		events: events,
 	}, nil
 }
 
-func (i *Input) Subscribe() error {
+func (i *Input) Subscribe(events chan<- map[string]any) error {
 	endpoint := server.Endpoint{
 		Method:  server.POST,
 		Path:    i.params.Endpoint,
-		Handler: i.endpoint(),
+		Handler: i.endpoint(events),
 	}
 
 	err := i.server.AddSubRouter(endpoint)
@@ -46,7 +44,7 @@ func (i *Input) Subscribe() error {
 	return nil
 }
 
-func (i *Input) endpoint() http.HandlerFunc {
+func (i *Input) endpoint(events chan<- map[string]any) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		bytes, err := io.ReadAll(r.Body)
 		if err != nil {
@@ -61,7 +59,7 @@ func (i *Input) endpoint() http.HandlerFunc {
 			return
 		}
 
-		i.events <- decoded
+		events <- decoded
 		w.WriteHeader(http.StatusOK)
 	}
 }

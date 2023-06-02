@@ -73,3 +73,16 @@ func (o *Output) SSEParams() (SSEParams, error) {
 
 	return params, nil
 }
+
+func (o *Output) MQTTParams() (MQTTParams, error) {
+	if o.Destination != MQTTPub {
+		return MQTTParams{}, fmt.Errorf("output source is not MQTT")
+	}
+
+	params, ok := o.params.(MQTTParams)
+	if !ok {
+		return MQTTParams{}, fmt.Errorf("input params are not of type MQTTParams")
+	}
+
+	return params, nil
+}
