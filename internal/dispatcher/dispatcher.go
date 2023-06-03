@@ -14,33 +14,24 @@ type extractor interface {
 }
 
 type dispatcher struct {
-	workflow     *workflow.Workflow
-	server       *server.Server
-	outputEvents map[string]chan []byte
-	globalEvents chan []globalEvent
+	workflow *workflow.Workflow
+	server   *server.Server
+	events   map[string]chan []byte
 }
 
-type globalEvent struct {
-	WorkflowName string `json:"workflow_name"`
-	SourceType   string `json:"source_type"`
-	SourceName   string `json:"source_name"`
-	Payload      []byte `json:"payload"`
-	State        string `json:"state"`
-}
-
-func Start(ctx context.Context, extractor extractor, port string) error {
-	s := server.New(port)
-
+func Run(ctx context.Context, extractor extractor, port string) error {
 	workflows, err := extractor.Extract(ctx)
 	if err != nil {
 		return err
 	}
 
+	s := server.New(port)
+
 	for _, wf := range workflows {
 		d := &dispatcher{
-			workflow:     wf,
-			server:       s,
-			outputEvents: make(map[string]chan []byte, len(wf.Outputs)),
+			workflow: wf,
+			server:   s,
+			events:   make(map[string]chan []byte, len(wf.Outputs)),
 		}
 
 		err := d.subscribeInputs()
@@ -54,48 +45,54 @@ func Start(ctx context.Context, extractor extractor, port string) error {
 		}
 	}
 
-	return s.Serve()
+	return s.Serve(workflows)
+}
+
+func (d dispatcher) notifyWebUI(notifier server.Notifier, bytes []byte, err error) {
+	d.server.NotifyWebUI(d.workflow.Name, notifier, bytes, err)
 }
 
 func (d dispatcher) dispatch(from workflow.Input, bytes []byte) {
-	log := logger.Get()
-
-	event, err := from.Decoder.Decode(bytes)
+	event, err := d.receive(from, bytes)
 	if err != nil {
-		log.Error().Msgf("error decoding event: %s", err.Error())
 		return
 	}
 
-	err = d.send(event)
-	if err != nil {
-		log.Error().Msgf("error sending event: %s", err.Error())
-		return
-	}
+	d.send(event)
 }
 
-func (d dispatcher) send(event map[string]any) error {
-	log := logger.Get()
+func (d dispatcher) receive(from workflow.Input, bytes []byte) (event map[string]any, err error) {
+	defer d.notifyWebUI(&from, bytes, err)
 
-	data, err := json.Marshal(event)
+	event, err = from.Decoder.Decode(bytes)
 	if err != nil {
-		return fmt.Errorf("error marshaling event: %w", err)
+		return nil, fmt.Errorf("error decoding event: %w", err)
 	}
 
-	for outputName, c := range d.outputEvents {
+	return event, nil
+}
+
+func (d dispatcher) send(event map[string]any) {
+	data, err := json.Marshal(event)
+	if err != nil {
+		logger.Get().Error().Msgf("error marshaling event: %s", err)
+		return
+	}
+
+	for outputName, c := range d.events {
 		output, ok := d.workflow.Outputs[outputName]
 		if !ok {
-			log.Warn().Msgf("output %s not found", outputName)
+			d.notifyWebUI(&output, data, fmt.Errorf("output %s not found", outputName))
 			continue
 		}
 
 		match := output.Condition.Match(event)
 		if !match {
+			d.notifyWebUI(&output, data, fmt.Errorf("event not matching output %s conditions", outputName))
 			continue
 		}
 
-		log.Info().Msgf("event dispatched: %s to %s", data, outputName)
+		d.notifyWebUI(&output, data, nil)
 		c <- data
 	}
-
-	return nil
 }

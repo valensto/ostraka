@@ -7,32 +7,32 @@ import (
 	"github.com/valensto/ostraka/internal/workflow"
 )
 
-type Publisher interface {
-	Register(events <-chan []byte) error
+type publisher interface {
+	Publish(events <-chan []byte) error
 }
 
 func (d dispatcher) registerOutputs() error {
 	for _, output := range d.workflow.Outputs {
-		d.outputEvents[output.Name] = make(chan []byte)
+		d.events[output.Name] = make(chan []byte)
 
-		publisher, err := d.getOutputProvider(output)
+		p, err := d.getPublisher(output)
 		if err != nil {
-			return fmt.Errorf("error getting output publisher: %w", err)
+			return fmt.Errorf("error getting publisher: %w", err)
 		}
 
-		err = publisher.Register(d.outputEvents[output.Name])
+		err = p.Publish(d.events[output.Name])
 		if err != nil {
-			return fmt.Errorf("error registering SSE output: %w", err)
+			return fmt.Errorf("error registering publisher: %w", err)
 		}
 	}
 
 	return nil
 }
 
-func (d dispatcher) getOutputProvider(output workflow.Output) (Publisher, error) {
+func (d dispatcher) getPublisher(output workflow.Output) (publisher, error) {
 	switch output.Destination {
 	case workflow.SSE:
-		return sse.New(output, d.server)
+		return sse.NewPublisher(output, d.server)
 	case workflow.MQTTPub:
 		return mqtt.NewPublisher(output)
 	default:

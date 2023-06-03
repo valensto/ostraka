@@ -14,8 +14,8 @@ func Banner(port string) {
 ██║   ██║╚════██║   ██║   ██╔══██╗██╔══██║██╔═██╗ ██╔══██║
 ╚██████╔╝███████║   ██║   ██║  ██║██║  ██║██║  ██╗██║  ██║
  ╚═════╝ ╚══════╝   ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝
-https://github.com/valensto/ostraka - %v ©
-HTTP server running on port - %v
+https://github.com/valensto/ostraka - %v
+HTTP server running on port - %s
 `
 	t := time.Now()
 	y := t.Year()

@@ -37,6 +37,10 @@ func UnmarshallOutput(name, destination string, condition *Condition, params any
 	return &o, nil
 }
 
+func (o *Output) FullName() string {
+	return fmt.Sprintf("[%s] %s", o.Destination, o.Name)
+}
+
 func (o *Output) unmarshallParams() error {
 	marshalled, err := json.Marshal(o.params)
 	if err != nil {

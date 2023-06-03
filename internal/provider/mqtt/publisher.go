@@ -5,18 +5,18 @@ import (
 	"github.com/valensto/ostraka/internal/workflow"
 )
 
-type Pub struct {
+type Publisher struct {
 	MQTT
 	output workflow.Output
 }
 
-func NewPublisher(output workflow.Output) (*Pub, error) {
+func NewPublisher(output workflow.Output) (*Publisher, error) {
 	params, err := output.MQTTParams()
 	if err != nil {
 		return nil, err
 	}
 
-	p := Pub{
+	p := Publisher{
 		MQTT: MQTT{
 			name:   output.Name,
 			params: params,
@@ -32,9 +32,9 @@ func NewPublisher(output workflow.Output) (*Pub, error) {
 	return &p, nil
 }
 
-func (p *Pub) Register(events <-chan []byte) error {
+func (p *Publisher) Publish(events <-chan []byte) error {
 	l := logger.Get()
-	l.Info().Msgf("output %s of type MQTT registered. Publishing to topic %s", p.name, p.params.Topic)
+	l.Info().Msgf("publisher %s of type MQTT registered. Publishing to topic %s", p.name, p.params.Topic)
 
 	go func() {
 		for {

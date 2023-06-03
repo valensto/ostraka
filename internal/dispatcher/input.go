@@ -8,30 +8,30 @@ import (
 	"github.com/valensto/ostraka/internal/workflow"
 )
 
-type Subscriber interface {
+type subscriber interface {
 	Subscribe(dispatch func(from workflow.Input, bytes []byte)) error
 }
 
 func (d dispatcher) subscribeInputs() error {
 	for _, input := range d.workflow.Inputs {
-		subscriber, err := d.getInputProvider(input)
+		s, err := d.getSubscriber(input)
 		if err != nil {
-			return fmt.Errorf("error getting input subscriber: %w", err)
+			return fmt.Errorf("error getting subscriber: %w", err)
 		}
 
-		err = subscriber.Subscribe(d.dispatch)
+		err = s.Subscribe(d.dispatch)
 		if err != nil {
-			return fmt.Errorf("error subscribing input: %w", err)
+			return fmt.Errorf("error registering subscriber: %w", err)
 		}
 	}
 
 	return nil
 }
 
-func (d dispatcher) getInputProvider(input workflow.Input) (Subscriber, error) {
+func (d dispatcher) getSubscriber(input workflow.Input) (subscriber, error) {
 	switch input.Source {
 	case workflow.Webhook:
-		return webhook.New(input, d.server)
+		return webhook.NewSubscriber(input, d.server)
 	case workflow.MQTTSub:
 		return mqtt.NewSubscriber(input)
 	default:

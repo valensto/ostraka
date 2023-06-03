@@ -33,6 +33,10 @@ func UnmarshallInput(name, source string, decoder Decoder, params any, event *Ev
 	return i, nil
 }
 
+func (i *Input) FullName() string {
+	return fmt.Sprintf("[%s] %s", i.Source, i.Name)
+}
+
 func (i *Input) unmarshallParams(e *Event) error {
 	marshalled, err := json.Marshal(i.params)
 	if err != nil {

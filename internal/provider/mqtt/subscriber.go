@@ -7,18 +7,18 @@ import (
 	"github.com/valensto/ostraka/internal/workflow"
 )
 
-type Sub struct {
+type Subscriber struct {
 	MQTT
 	input workflow.Input
 }
 
-func NewSubscriber(input workflow.Input) (*Sub, error) {
+func NewSubscriber(input workflow.Input) (*Subscriber, error) {
 	params, err := input.MQTTParams()
 	if err != nil {
 		return nil, err
 	}
 
-	s := Sub{
+	s := Subscriber{
 		MQTT: MQTT{
 			name:   input.Name,
 			params: params,
@@ -34,7 +34,7 @@ func NewSubscriber(input workflow.Input) (*Sub, error) {
 	return &s, nil
 }
 
-func (m *Sub) Subscribe(dispatch func(from workflow.Input, bytes []byte)) error {
+func (m *Subscriber) Subscribe(dispatch func(from workflow.Input, bytes []byte)) error {
 	token := m.client.Subscribe(m.params.Topic, 1, m.eventPubHandler(dispatch))
 	token.Wait()
 
@@ -42,11 +42,11 @@ func (m *Sub) Subscribe(dispatch func(from workflow.Input, bytes []byte)) error 
 		return fmt.Errorf("error subscribing to topic: %s", m.params.Topic)
 	}
 
-	logger.Get().Info().Msgf("input %s of type MQTT registered. Listening from topic %s", m.name, m.params.Topic)
+	logger.Get().Info().Msgf("subscriber %s of type MQTT registered. Listening from topic %s", m.name, m.params.Topic)
 	return nil
 }
 
-func (m *Sub) eventPubHandler(dispatch func(from workflow.Input, bytes []byte)) mqtt.MessageHandler {
+func (m *Subscriber) eventPubHandler(dispatch func(from workflow.Input, bytes []byte)) mqtt.MessageHandler {
 	return func(client mqtt.Client, msg mqtt.Message) {
 		dispatch(m.input, msg.Payload())
 		logger.Get().Info().Msgf("Received message: %s from topic: %s", msg.Payload(), msg.Topic())
