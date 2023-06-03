@@ -1,49 +1,54 @@
 package mqtt
 
 import (
-	"encoding/json"
 	"fmt"
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/valensto/ostraka/internal/logger"
 	"github.com/valensto/ostraka/internal/workflow"
 )
 
-func NewSubscriber(input workflow.Input) (*MQTT, error) {
+type Sub struct {
+	MQTT
+	input workflow.Input
+}
+
+func NewSubscriber(input workflow.Input) (*Sub, error) {
 	params, err := input.MQTTParams()
 	if err != nil {
 		return nil, err
 	}
 
-	c, err := connect(input.Name, params)
+	s := Sub{
+		MQTT: MQTT{
+			name:   input.Name,
+			params: params,
+		},
+		input: input,
+	}
+
+	err = s.MQTT.connect()
 	if err != nil {
 		return nil, err
 	}
 
-	return c, nil
+	return &s, nil
 }
 
-func (c *MQTT) Subscribe(events chan<- map[string]any) error {
-	token := c.client.Subscribe(c.params.Topic, 1, c.eventPubHandler(events))
+func (m *Sub) Subscribe(dispatch func(bytes []byte, from workflow.Input)) error {
+	token := m.client.Subscribe(m.params.Topic, 1, m.eventPubHandler(dispatch))
 	token.Wait()
 
 	if token.Error() != nil {
-		return fmt.Errorf("error subscribing to topic: %s", c.params.Topic)
+		return fmt.Errorf("error subscribing to topic: %s", m.params.Topic)
 	}
 
-	logger.Get().Info().Msgf("input %s of type MQTT registered. Listening from topic %s", c.name, c.params.Topic)
+	logger.Get().Info().Msgf("input %s of type MQTT registered. Listening from topic %s", m.name, m.params.Topic)
 	return nil
 }
 
-func (c *MQTT) eventPubHandler(events chan<- map[string]any) mqtt.MessageHandler {
+func (m *Sub) eventPubHandler(dispatch func(bytes []byte, from workflow.Input)) mqtt.MessageHandler {
 	return func(client mqtt.Client, msg mqtt.Message) {
-		var data map[string]any
-		err := json.Unmarshal(msg.Payload(), &data)
-		if err != nil {
-			logger.Get().Error().Msgf("error decoding message: %s", err)
-			return
-		}
-
-		events <- data
+		dispatch(msg.Payload(), m.input)
 		logger.Get().Info().Msgf("Received message: %s from topic: %s", msg.Payload(), msg.Topic())
 	}
 }

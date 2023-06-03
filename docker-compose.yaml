@@ -6,7 +6,7 @@ services:
       context: .
       dockerfile: dev.Dockerfile
       target: builder
-    container_name: ostraka-service
+    container_name: ostraka-core
     volumes:
       - .:/ostraka
       - /ostraka/webui

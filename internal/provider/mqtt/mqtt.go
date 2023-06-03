@@ -13,17 +13,17 @@ import (
 type MQTT struct {
 	client    mqtt.Client
 	connected chan bool
-	params    workflow.MQTTParams
 	name      string
+	params    workflow.MQTTParams
 }
 
-func connect(name string, params workflow.MQTTParams) (*MQTT, error) {
+func (m *MQTT) connect() error {
 	opts := mqtt.NewClientOptions()
-	opts.AddBroker(params.Broker)
+	opts.AddBroker(m.params.Broker)
 	opts.SetClientID(fmt.Sprintf("%s-%s", uuid.New(), "ostraka"))
-	opts.SetUsername(params.User)
-	opts.SetPassword(params.Password)
-	opts.SetAutoReconnect(params.AutoReconnect)
+	opts.SetUsername(m.params.User)
+	opts.SetPassword(m.params.Password)
+	opts.SetAutoReconnect(m.params.AutoReconnect)
 	opts.SetDefaultPublishHandler(defaultPubHandler)
 
 	opts.OnConnect = connectHandler
@@ -31,30 +31,25 @@ func connect(name string, params workflow.MQTTParams) (*MQTT, error) {
 
 	client := mqtt.NewClient(opts)
 	if token := client.Connect(); token.Wait() && token.Error() != nil {
-		return nil, fmt.Errorf("error connecting to mqtt broker: %w", token.Error())
+		return fmt.Errorf("error connecting to mqtt broker: %w", token.Error())
 	}
 
-	c := &MQTT{
-		name:      name,
-		params:    params,
-		client:    client,
-		connected: make(chan bool),
+	m.client = client
+
+	if m.params.KeepAlive {
+		go m.keepalive()
 	}
 
-	if params.KeepAlive {
-		go c.keepalive()
-	}
-
-	return c, nil
+	return nil
 }
 
-func (c *MQTT) keepalive() {
+func (m *MQTT) keepalive() {
 	const period = 2 * time.Second
 	var up, closed bool
 	log := logger.Get()
 	for {
 		select {
-		case up, closed = <-c.connected:
+		case up, closed = <-m.connected:
 			if !closed {
 				return
 			}
@@ -64,9 +59,9 @@ func (c *MQTT) keepalive() {
 				continue
 			}
 
-			logger.Get().Info().Msgf("%s send mqtt keep-alive", c.name)
-			if token := c.client.Publish("ping_topic", 0, false, "ping"); token.Wait() && token.Error() != nil {
-				log.Warn().Msgf("%s mqtt keep-alive failed: %s", c.name, token.Error())
+			logger.Get().Info().Msgf("%s send mqtt keep-alive", m.name)
+			if token := m.client.Publish("ping_topic", 0, false, "ping"); token.Wait() && token.Error() != nil {
+				log.Warn().Msgf("%s mqtt keep-alive failed: %s", m.name, token.Error())
 			}
 			break
 		}
@@ -85,16 +80,16 @@ var connectLostHandler mqtt.ConnectionLostHandler = func(client mqtt.Client, err
 	logger.Get().Warn().Msgf("Connection lost: %v", err)
 }
 
-func (c *MQTT) Disconnect() {
-	c.client.Disconnect(500)
-	close(c.connected)
+func (m *MQTT) Disconnect() {
+	m.client.Disconnect(500)
+	close(m.connected)
 }
 
-func (c *MQTT) Connect() error {
-	if c.client.IsConnected() {
+func (m *MQTT) Connect() error {
+	if m.client.IsConnected() {
 		return nil
 	}
-	token := c.client.Connect()
+	token := m.client.Connect()
 	token.Wait()
 	return token.Error()
 }

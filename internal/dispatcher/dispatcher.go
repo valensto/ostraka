@@ -3,6 +3,7 @@ package dispatcher
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"github.com/valensto/ostraka/internal/logger"
 	"github.com/valensto/ostraka/internal/server"
 	"github.com/valensto/ostraka/internal/workflow"
@@ -15,7 +16,6 @@ type extractor interface {
 type dispatcher struct {
 	workflow     *workflow.Workflow
 	server       *server.Server
-	inputEvents  chan map[string]any
 	outputEvents map[string]chan []byte
 	globalEvents chan []globalEvent
 }
@@ -24,7 +24,7 @@ type globalEvent struct {
 	WorkflowName string `json:"workflow_name"`
 	SourceType   string `json:"source_type"`
 	SourceName   string `json:"source_name"`
-	Payload      any    `json:"payload"`
+	Payload      []byte `json:"payload"`
 	State        string `json:"state"`
 }
 
@@ -40,11 +40,8 @@ func Dispatch(ctx context.Context, extractor extractor, port string) error {
 		d := &dispatcher{
 			workflow:     wf,
 			server:       s,
-			inputEvents:  make(chan map[string]any, len(wf.Inputs)),
-			outputEvents: make(map[string]chan []byte),
+			outputEvents: make(map[string]chan []byte, len(wf.Outputs)),
 		}
-
-		go d.dispatchEvents()
 
 		err := d.subscribeInputs()
 		if err != nil {
@@ -60,32 +57,45 @@ func Dispatch(ctx context.Context, extractor extractor, port string) error {
 	return s.Serve()
 }
 
-func (d dispatcher) dispatchEvents() {
+func (d dispatcher) dispatchEvent(bytes []byte, from workflow.Input) {
 	log := logger.Get()
-	for {
-		select {
-		case event := <-d.inputEvents:
-			data, err := json.Marshal(event)
-			if err != nil {
-				log.Warn().Msgf("error marshaling event: %s", err.Error())
-				continue
-			}
 
-			for outputName, c := range d.outputEvents {
-				output, ok := d.workflow.Outputs[outputName]
-				if !ok {
-					log.Warn().Msgf("output %s not found", outputName)
-					continue
-				}
-
-				match := output.Condition.Match(event)
-				if !match {
-					continue
-				}
-
-				log.Info().Msgf("event dispatched: %s to %s", data, outputName)
-				c <- data
-			}
-		}
+	event, err := from.Decoder.Decode(bytes)
+	if err != nil {
+		log.Error().Msgf("error decoding event: %s", err.Error())
+		return
 	}
+
+	err = d.sendEvent(event)
+	if err != nil {
+		log.Error().Msgf("error sending event: %s", err.Error())
+		return
+	}
+}
+
+func (d dispatcher) sendEvent(event map[string]any) error {
+	log := logger.Get()
+
+	data, err := json.Marshal(event)
+	if err != nil {
+		return fmt.Errorf("error marshaling event: %w", err)
+	}
+
+	for outputName, c := range d.outputEvents {
+		output, ok := d.workflow.Outputs[outputName]
+		if !ok {
+			log.Warn().Msgf("output %s not found", outputName)
+			continue
+		}
+
+		match := output.Condition.Match(event)
+		if !match {
+			continue
+		}
+
+		log.Info().Msgf("event dispatched: %s to %s", data, outputName)
+		c <- data
+	}
+
+	return nil
 }

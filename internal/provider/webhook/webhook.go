@@ -11,8 +11,8 @@ import (
 
 type Input struct {
 	server *server.Server
-	workflow.Input
 	params workflow.WebhookParams
+	workflow.Input
 }
 
 func New(input workflow.Input, server *server.Server) (*Input, error) {
@@ -28,11 +28,11 @@ func New(input workflow.Input, server *server.Server) (*Input, error) {
 	}, nil
 }
 
-func (i *Input) Subscribe(events chan<- map[string]any) error {
+func (i *Input) Subscribe(dispatch func(bytes []byte, from workflow.Input)) error {
 	endpoint := server.Endpoint{
 		Method:  server.POST,
 		Path:    i.params.Endpoint,
-		Handler: i.endpoint(events),
+		Handler: i.endpoint(dispatch),
 	}
 
 	err := i.server.AddSubRouter(endpoint)
@@ -44,7 +44,7 @@ func (i *Input) Subscribe(events chan<- map[string]any) error {
 	return nil
 }
 
-func (i *Input) endpoint(events chan<- map[string]any) http.HandlerFunc {
+func (i *Input) endpoint(dispatch func(bytes []byte, from workflow.Input)) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		bytes, err := io.ReadAll(r.Body)
 		if err != nil {
@@ -52,14 +52,7 @@ func (i *Input) endpoint(events chan<- map[string]any) http.HandlerFunc {
 			return
 		}
 
-		decoded, err := i.Decoder.Decode(bytes)
-		if err != nil {
-			logger.Get().Error().Msgf("error decoding webhook input: %s", err)
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-
-		events <- decoded
+		dispatch(bytes, i.Input)
 		w.WriteHeader(http.StatusOK)
 	}
 }

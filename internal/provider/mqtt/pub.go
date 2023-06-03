@@ -5,32 +5,45 @@ import (
 	"github.com/valensto/ostraka/internal/workflow"
 )
 
-func NewPublisher(output workflow.Output) (*MQTT, error) {
+type Pub struct {
+	MQTT
+	output workflow.Output
+}
+
+func NewPublisher(output workflow.Output) (*Pub, error) {
 	params, err := output.MQTTParams()
 	if err != nil {
 		return nil, err
 	}
 
-	c, err := connect(output.Name, params)
+	p := Pub{
+		MQTT: MQTT{
+			name:   output.Name,
+			params: params,
+		},
+		output: output,
+	}
+
+	err = p.MQTT.connect()
 	if err != nil {
 		return nil, err
 	}
 
-	return c, nil
+	return &p, nil
 }
 
-func (c *MQTT) Register(events <-chan []byte) error {
+func (p *Pub) Register(events <-chan []byte) error {
 	l := logger.Get()
-	l.Info().Msgf("output %s of type MQTT registered. Publishing to topic %s", c.name, c.params.Topic)
+	l.Info().Msgf("output %s of type MQTT registered. Publishing to topic %s", p.name, p.params.Topic)
 
 	go func() {
 		for {
 			select {
 			case event := <-events:
-				token := c.client.Publish(c.params.Topic, 1, false, event)
+				token := p.client.Publish(p.params.Topic, 1, false, event)
 				token.Wait()
 				if token.Error() != nil {
-					l.Error().Msgf("error publishing to topic: %s", c.params.Topic)
+					l.Error().Msgf("error publishing to topic: %s", p.params.Topic)
 				}
 			}
 		}

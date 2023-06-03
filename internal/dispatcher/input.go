@@ -9,7 +9,7 @@ import (
 )
 
 type Subscriber interface {
-	Subscribe(events chan<- map[string]any) error
+	Subscribe(dispatch func(bytes []byte, from workflow.Input)) error
 }
 
 func (d dispatcher) subscribeInputs() error {
@@ -19,7 +19,7 @@ func (d dispatcher) subscribeInputs() error {
 			return fmt.Errorf("error getting input subscriber: %w", err)
 		}
 
-		err = subscriber.Subscribe(d.inputEvents)
+		err = subscriber.Subscribe(d.dispatchEvent)
 		if err != nil {
 			return fmt.Errorf("error subscribing input: %w", err)
 		}
