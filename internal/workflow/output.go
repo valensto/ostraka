@@ -5,6 +5,10 @@ import (
 	"fmt"
 )
 
+type outputType interface {
+	SSEParams
+}
+
 type Output struct {
 	Name        string
 	Destination Destination
@@ -65,6 +69,19 @@ func (o *Output) SSEParams() (SSEParams, error) {
 	params, ok := o.params.(SSEParams)
 	if !ok {
 		return SSEParams{}, fmt.Errorf("output params are not of type SSEParams")
+	}
+
+	return params, nil
+}
+
+func (o *Output) MQTTParams() (MQTTParams, error) {
+	if o.Destination != MQTTPub {
+		return MQTTParams{}, fmt.Errorf("output source is not MQTT")
+	}
+
+	params, ok := o.params.(MQTTParams)
+	if !ok {
+		return MQTTParams{}, fmt.Errorf("input params are not of type MQTTParams")
 	}
 
 	return params, nil

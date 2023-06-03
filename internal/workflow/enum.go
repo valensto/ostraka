@@ -33,7 +33,7 @@ type Source string
 
 const (
 	Webhook Source = "webhook"
-	MQTT    Source = "mqtt"
+	MQTTSub Source = "mqtt"
 )
 
 func getSource(src string) (Source, error) {
@@ -50,7 +50,7 @@ func (src Source) String() string {
 
 func (src Source) isValid() error {
 	switch src {
-	case Webhook, MQTT:
+	case Webhook, MQTTSub:
 		return nil
 	default:
 		return fmt.Errorf("invalid source: %s", src)
@@ -60,8 +60,9 @@ func (src Source) isValid() error {
 type Destination string
 
 const (
-	SSE   Destination = "sse"
-	Email Destination = "email"
+	SSE     Destination = "sse"
+	Email   Destination = "email"
+	MQTTPub Destination = "mqtt"
 )
 
 func getDestination(dest string) (Destination, error) {
@@ -78,7 +79,7 @@ func (dest Destination) String() string {
 
 func (dest Destination) isValid() error {
 	switch dest {
-	case SSE, Email:
+	case SSE, Email, MQTTPub:
 		return nil
 	default:
 		return fmt.Errorf("invalid destination: %s", dest)

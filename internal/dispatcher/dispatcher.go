@@ -3,10 +3,8 @@ package dispatcher
 import (
 	"context"
 	"encoding/json"
-	"github.com/go-chi/chi/v5"
 	"github.com/valensto/ostraka/internal/logger"
-	"net/http"
-
+	"github.com/valensto/ostraka/internal/server"
 	"github.com/valensto/ostraka/internal/workflow"
 )
 
@@ -16,13 +14,23 @@ type extractor interface {
 
 type dispatcher struct {
 	workflow     *workflow.Workflow
-	router       *chi.Mux
+	server       *server.Server
 	inputEvents  chan map[string]any
 	outputEvents map[string]chan []byte
+	globalEvents chan []globalEvent
+}
+
+type globalEvent struct {
+	WorkflowName string `json:"workflow_name"`
+	SourceType   string `json:"source_type"`
+	SourceName   string `json:"source_name"`
+	Payload      any    `json:"payload"`
+	State        string `json:"state"`
 }
 
 func Dispatch(ctx context.Context, extractor extractor, port string) error {
-	router := chi.NewRouter()
+	s := server.New(port)
+
 	workflows, err := extractor.Extract(ctx)
 	if err != nil {
 		return err
@@ -31,7 +39,7 @@ func Dispatch(ctx context.Context, extractor extractor, port string) error {
 	for _, wf := range workflows {
 		d := &dispatcher{
 			workflow:     wf,
-			router:       router,
+			server:       s,
 			inputEvents:  make(chan map[string]any, len(wf.Inputs)),
 			outputEvents: make(map[string]chan []byte),
 		}
@@ -49,7 +57,7 @@ func Dispatch(ctx context.Context, extractor extractor, port string) error {
 		}
 	}
 
-	return http.ListenAndServe(":"+port, router)
+	return s.Serve()
 }
 
 func (d dispatcher) dispatchEvents() {

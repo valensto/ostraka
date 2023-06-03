@@ -1,13 +1,16 @@
 version: '3.8'
 
 services:
-  ostraka-service:
+  core:
     build:
-      context: docker/dev
+      context: .
+      dockerfile: dev.Dockerfile
+      target: builder
     container_name: ostraka-service
     volumes:
-      - .:/service
-    working_dir: /service
+      - .:/ostraka
+      - /ostraka/webui
+    working_dir: /ostraka
     ports:
       - "4000:4000"
     env_file:

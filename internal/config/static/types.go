@@ -1,6 +1,7 @@
 package static
 
 type workflowModel struct {
+	Name    string        `yaml:"name"   validate:"required"`
 	Event   eventModel    `yaml:"event"   validate:"required,dive,required"`
 	Inputs  []inputModel  `yaml:"inputs"   validate:"required,dive,required"`
 	Outputs []outputModel `yaml:"outputs"   validate:"required,dive,required"`

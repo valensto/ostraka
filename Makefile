@@ -18,13 +18,19 @@ dev: down
 .PHONY: test
 test:
 	@echo [ testing ostraka... ]
-	@docker exec -it ostraka-service sh -c "reflex -r '(\.go$|go\.mod)' -s sh /test.sh"
+	@docker exec -it core sh -c "reflex -r '(\.go$|go\.mod)' -s sh /test.sh"
 	@echo $(SUCCESS)
 
 .PHONY: down
 down:
 	@echo [ teardown all containers... ]
 	docker-compose down
+	@echo $(SUCCESS)
+
+.PHONY: clear
+clear: down
+	@echo [ stop and clear all containers... ]
+	docker image rm -f ostraka-core
 	@echo $(SUCCESS)
 
 .PHONY: sse-example

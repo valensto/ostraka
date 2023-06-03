@@ -49,7 +49,7 @@ func (i *Input) unmarshallParams(e *Event) error {
 		}
 
 		params = wh
-	case MQTT:
+	case MQTTSub:
 		var mqtt MQTTParams
 		err = unmarshalParams(marshalled, &mqtt)
 		if err != nil {
@@ -81,7 +81,7 @@ func (i *Input) WebhookParams() (WebhookParams, error) {
 }
 
 func (i *Input) MQTTParams() (MQTTParams, error) {
-	if i.Source != MQTT {
+	if i.Source != MQTTSub {
 		return MQTTParams{}, fmt.Errorf("input source is not MQTT")
 	}
 
