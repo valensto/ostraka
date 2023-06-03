@@ -28,7 +28,7 @@ func New(input workflow.Input, server *server.Server) (*Input, error) {
 	}, nil
 }
 
-func (i *Input) Subscribe(dispatch func(bytes []byte, from workflow.Input)) error {
+func (i *Input) Subscribe(dispatch func(from workflow.Input, bytes []byte)) error {
 	endpoint := server.Endpoint{
 		Method:  server.POST,
 		Path:    i.params.Endpoint,
@@ -44,7 +44,7 @@ func (i *Input) Subscribe(dispatch func(bytes []byte, from workflow.Input)) erro
 	return nil
 }
 
-func (i *Input) endpoint(dispatch func(bytes []byte, from workflow.Input)) http.HandlerFunc {
+func (i *Input) endpoint(dispatch func(from workflow.Input, bytes []byte)) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		bytes, err := io.ReadAll(r.Body)
 		if err != nil {
@@ -52,7 +52,7 @@ func (i *Input) endpoint(dispatch func(bytes []byte, from workflow.Input)) http.
 			return
 		}
 
-		dispatch(bytes, i.Input)
+		dispatch(i.Input, bytes)
 		w.WriteHeader(http.StatusOK)
 	}
 }

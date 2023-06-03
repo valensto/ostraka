@@ -20,5 +20,5 @@ func run(port string) error {
 	ctx := context.Background()
 	extractor := local.New(".ostraka/workflows")
 
-	return dispatcher.Dispatch(ctx, extractor, port)
+	return dispatcher.Start(ctx, extractor, port)
 }

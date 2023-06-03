@@ -28,7 +28,7 @@ type globalEvent struct {
 	State        string `json:"state"`
 }
 
-func Dispatch(ctx context.Context, extractor extractor, port string) error {
+func Start(ctx context.Context, extractor extractor, port string) error {
 	s := server.New(port)
 
 	workflows, err := extractor.Extract(ctx)
@@ -57,7 +57,7 @@ func Dispatch(ctx context.Context, extractor extractor, port string) error {
 	return s.Serve()
 }
 
-func (d dispatcher) dispatchEvent(bytes []byte, from workflow.Input) {
+func (d dispatcher) dispatch(from workflow.Input, bytes []byte) {
 	log := logger.Get()
 
 	event, err := from.Decoder.Decode(bytes)
@@ -66,14 +66,14 @@ func (d dispatcher) dispatchEvent(bytes []byte, from workflow.Input) {
 		return
 	}
 
-	err = d.sendEvent(event)
+	err = d.send(event)
 	if err != nil {
 		log.Error().Msgf("error sending event: %s", err.Error())
 		return
 	}
 }
 
-func (d dispatcher) sendEvent(event map[string]any) error {
+func (d dispatcher) send(event map[string]any) error {
 	log := logger.Get()
 
 	data, err := json.Marshal(event)
