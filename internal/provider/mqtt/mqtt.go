@@ -1,14 +1,12 @@
 package mqtt
 
 import (
-	"encoding/json"
 	"fmt"
+	"github.com/google/uuid"
 	"github.com/valensto/ostraka/internal/logger"
 	"time"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
-	"github.com/google/uuid"
-
 	"github.com/valensto/ostraka/internal/workflow"
 )
 
@@ -19,7 +17,7 @@ type MQTT struct {
 	name      string
 }
 
-func New(name string, params workflow.MQTTParams) (*MQTT, error) {
+func connect(name string, params workflow.MQTTParams) (*MQTT, error) {
 	opts := mqtt.NewClientOptions()
 	opts.AddBroker(params.Broker)
 	opts.SetClientID(fmt.Sprintf("%s-%s", uuid.New(), "ostraka"))
@@ -72,53 +70,6 @@ func (c *MQTT) keepalive() {
 			}
 			break
 		}
-	}
-
-}
-
-func (c *MQTT) Subscribe(events chan<- map[string]any) error {
-	token := c.client.Subscribe(c.params.Topic, 1, c.eventPubHandler(events))
-	token.Wait()
-
-	if token.Error() != nil {
-		return fmt.Errorf("error subscribing to topic: %s", c.params.Topic)
-	}
-
-	logger.Get().Info().Msgf("input %s of type MQTT registered. Listening from topic %s", c.name, c.params.Topic)
-	return nil
-}
-
-func (c *MQTT) Register(events <-chan []byte) error {
-	l := logger.Get()
-	l.Info().Msgf("output %s of type MQTT registered. Publishing to topic %s", c.name, c.params.Topic)
-
-	go func() {
-		for {
-			select {
-			case event := <-events:
-				token := c.client.Publish(c.params.Topic, 1, false, event)
-				token.Wait()
-				if token.Error() != nil {
-					l.Error().Msgf("error publishing to topic: %s", c.params.Topic)
-				}
-			}
-		}
-	}()
-
-	return nil
-}
-
-func (c *MQTT) eventPubHandler(events chan<- map[string]any) mqtt.MessageHandler {
-	return func(client mqtt.Client, msg mqtt.Message) {
-		var data map[string]any
-		err := json.Unmarshal(msg.Payload(), &data)
-		if err != nil {
-			logger.Get().Error().Msgf("error decoding message: %s", err)
-			return
-		}
-
-		events <- data
-		logger.Get().Info().Msgf("Received message: %s from topic: %s", msg.Payload(), msg.Topic())
 	}
 }
 

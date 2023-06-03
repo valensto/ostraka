@@ -28,17 +28,13 @@ func (d dispatcher) subscribeInputs() error {
 	return nil
 }
 
-func (d dispatcher) getInputProvider(i workflow.Input) (Subscriber, error) {
-	switch i.Source {
+func (d dispatcher) getInputProvider(input workflow.Input) (Subscriber, error) {
+	switch input.Source {
 	case workflow.Webhook:
-		return webhook.New(i, d.server)
+		return webhook.New(input, d.server)
 	case workflow.MQTTSub:
-		params, err := i.MQTTParams()
-		if err != nil {
-			return nil, err
-		}
-		return mqtt.New(i.Name, params)
+		return mqtt.NewSubscriber(input)
 	default:
-		return nil, fmt.Errorf("unknown input type: %s", i.Source)
+		return nil, fmt.Errorf("unknown input type: %s", input.Source)
 	}
 }

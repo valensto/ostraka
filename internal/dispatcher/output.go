@@ -29,17 +29,13 @@ func (d dispatcher) registerOutputs() error {
 	return nil
 }
 
-func (d dispatcher) getOutputProvider(o workflow.Output) (Publisher, error) {
-	switch o.Destination {
+func (d dispatcher) getOutputProvider(output workflow.Output) (Publisher, error) {
+	switch output.Destination {
 	case workflow.SSE:
-		return sse.New(o, d.server)
+		return sse.New(output, d.server)
 	case workflow.MQTTPub:
-		params, err := o.MQTTParams()
-		if err != nil {
-			return nil, err
-		}
-		return mqtt.New(o.Name, params)
+		return mqtt.NewPublisher(output)
 	default:
-		return nil, fmt.Errorf("unknown output type: %s", o.Destination)
+		return nil, fmt.Errorf("unknown output type: %s", output.Destination)
 	}
 }

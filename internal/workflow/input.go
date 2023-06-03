@@ -66,29 +66,3 @@ func (i *Input) unmarshallParams(e *Event) error {
 
 	return params.validate()
 }
-
-func (i *Input) WebhookParams() (WebhookParams, error) {
-	if i.Source != Webhook {
-		return WebhookParams{}, fmt.Errorf("input source is not Webhook")
-	}
-
-	params, ok := i.params.(WebhookParams)
-	if !ok {
-		return WebhookParams{}, fmt.Errorf("input params are not of type WebhookParams")
-	}
-
-	return params, nil
-}
-
-func (i *Input) MQTTParams() (MQTTParams, error) {
-	if i.Source != MQTTSub {
-		return MQTTParams{}, fmt.Errorf("input source is not MQTT")
-	}
-
-	params, ok := i.params.(MQTTParams)
-	if !ok {
-		return MQTTParams{}, fmt.Errorf("input params are not of type MQTTParams")
-	}
-
-	return params, nil
-}
