@@ -13,20 +13,31 @@ type publisher interface {
 
 func (d dispatcher) registerOutputs() error {
 	for _, output := range d.workflow.Outputs {
-		d.events[output.Name] = make(chan []byte)
+		d.senders[&output] = make(chan []byte)
 
 		p, err := d.getPublisher(output)
 		if err != nil {
 			return fmt.Errorf("error getting publisher: %w", err)
 		}
 
-		err = p.Publish(d.events[output.Name])
+		err = p.Publish(d.senders[&output])
 		if err != nil {
 			return fmt.Errorf("error registering publisher: %w", err)
 		}
 	}
 
 	return nil
+}
+
+func (d dispatcher) registerWebui() error {
+	output := workflow.WebUIOutput()
+
+	p, err := sse.NewPublisher(output, d.server)
+	if err != nil {
+		return fmt.Errorf("error creating webui publisher: %w", err)
+	}
+
+	return p.Publish(d.server.Notifications())
 }
 
 func (d dispatcher) getPublisher(output workflow.Output) (publisher, error) {

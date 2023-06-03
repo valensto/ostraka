@@ -2,7 +2,6 @@ package server
 
 import (
 	"encoding/json"
-	"github.com/rs/zerolog/log"
 	"github.com/valensto/ostraka/internal/logger"
 	"github.com/valensto/ostraka/internal/workflow"
 	"html/template"
@@ -32,6 +31,8 @@ func mapWorkflowToDTO(workflows []*workflow.Workflow) []workflowDTO {
 }
 
 func (s *Server) serveWebui(workflows []*workflow.Workflow) {
+	// TODO: add basic auth from config or env var
+
 	s.Router.Handle("/assets/*", http.StripPrefix("/assets/", http.FileServer(http.Dir("webui/dist/assets"))))
 	s.Router.Get("/dashboard", s.webui())
 	s.Router.Get("/workflows", s.getWorkflows(workflows))
@@ -40,13 +41,8 @@ func (s *Server) serveWebui(workflows []*workflow.Workflow) {
 }
 
 func (s *Server) getWorkflows(workflows []*workflow.Workflow) http.HandlerFunc {
-	type response struct {
-		Workflows []workflowDTO `json:"workflows"`
-	}
-
 	return func(w http.ResponseWriter, r *http.Request) {
-		wfs := mapWorkflowToDTO(workflows)
-		s.Respond(w, r, http.StatusOK, response{Workflows: wfs})
+		s.Respond(w, r, http.StatusOK, mapWorkflowToDTO(workflows))
 	}
 }
 
@@ -61,6 +57,10 @@ func (s *Server) webui() http.HandlerFunc {
 
 		s.Respond(w, r, http.StatusOK, nil)
 	}
+}
+
+func (s *Server) Notifications() <-chan []byte {
+	return s.notifications
 }
 
 func (s *Server) NotifyWebUI(workflowName string, notifier Notifier, event []byte, err error) {
@@ -89,7 +89,7 @@ func (s *Server) NotifyWebUI(workflowName string, notifier Notifier, event []byt
 		Message:  "message",
 	}
 
-	n.log()
+	s.notifications <- n.marshall()
 }
 
 type (
@@ -130,12 +130,4 @@ func (n notification) marshall() []byte {
 	}
 
 	return marshal
-}
-
-func (n notification) log() {
-	if n.State == failed {
-		log.Warn().Msg(n.Message)
-	} else {
-		log.Info().Msg(n.Message)
-	}
 }

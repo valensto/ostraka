@@ -13,9 +13,10 @@ import (
 )
 
 type Server struct {
-	Router *chi.Mux
-	port   string
-	host   string
+	Router        *chi.Mux
+	port          string
+	host          string
+	notifications chan []byte
 }
 
 func New(port string) *Server {
@@ -41,11 +42,13 @@ func New(port string) *Server {
 		Router: mux,
 		port:   port,
 		// TODO: replace localhost by the current host
-		host: "http://localhost",
+		host:          "http://localhost",
+		notifications: make(chan []byte),
 	}
 }
 
-func (s *Server) Serve(workflows []*workflow.Workflow) error {
+func (s *Server) Run(workflows []*workflow.Workflow) error {
+	// TODO: use config or env var to enable/disable the webui
 	s.serveWebui(workflows)
 
 	h2s := &http2.Server{}

@@ -16,10 +16,10 @@ type extractor interface {
 type dispatcher struct {
 	workflow *workflow.Workflow
 	server   *server.Server
-	events   map[string]chan []byte
+	senders  map[*workflow.Output]chan []byte
 }
 
-func Run(ctx context.Context, extractor extractor, port string) error {
+func Dispatch(ctx context.Context, extractor extractor, port string) error {
 	workflows, err := extractor.Extract(ctx)
 	if err != nil {
 		return err
@@ -31,7 +31,7 @@ func Run(ctx context.Context, extractor extractor, port string) error {
 		d := &dispatcher{
 			workflow: wf,
 			server:   s,
-			events:   make(map[string]chan []byte, len(wf.Outputs)),
+			senders:  make(map[*workflow.Output]chan []byte, len(wf.Outputs)),
 		}
 
 		err := d.subscribeInputs()
@@ -43,33 +43,32 @@ func Run(ctx context.Context, extractor extractor, port string) error {
 		if err != nil {
 			return err
 		}
+
+		err = d.registerWebui()
+		if err != nil {
+			return err
+		}
 	}
 
-	return s.Serve(workflows)
+	return s.Run(workflows)
 }
 
 func (d dispatcher) notifyWebUI(notifier server.Notifier, bytes []byte, err error) {
+	// TODO: early return if webui is not enabled
 	d.server.NotifyWebUI(d.workflow.Name, notifier, bytes, err)
 }
 
-func (d dispatcher) dispatch(from workflow.Input, bytes []byte) {
-	event, err := d.receive(from, bytes)
+func (d dispatcher) dispatch(from workflow.Input, data []byte) {
+	var err error
+	defer d.notifyWebUI(&from, data, err)
+
+	event, err := from.Decoder.Decode(data)
 	if err != nil {
+		logger.Get().Error().Msgf("error decoding input %s: %s", from.Name, err)
 		return
 	}
 
 	d.send(event)
-}
-
-func (d dispatcher) receive(from workflow.Input, bytes []byte) (event map[string]any, err error) {
-	defer d.notifyWebUI(&from, bytes, err)
-
-	event, err = from.Decoder.Decode(bytes)
-	if err != nil {
-		return nil, fmt.Errorf("error decoding event: %w", err)
-	}
-
-	return event, nil
 }
 
 func (d dispatcher) send(event map[string]any) {
@@ -79,20 +78,15 @@ func (d dispatcher) send(event map[string]any) {
 		return
 	}
 
-	for outputName, c := range d.events {
-		output, ok := d.workflow.Outputs[outputName]
-		if !ok {
-			d.notifyWebUI(&output, data, fmt.Errorf("output %s not found", outputName))
+	for output, c := range d.senders {
+		if !output.Condition.Match(event) {
+			message := fmt.Errorf("event not matching output %s conditions", output.Name)
+			d.notifyWebUI(output, data, message)
+			logger.Get().Info().Msg(message.Error())
 			continue
 		}
 
-		match := output.Condition.Match(event)
-		if !match {
-			d.notifyWebUI(&output, data, fmt.Errorf("event not matching output %s conditions", outputName))
-			continue
-		}
-
-		d.notifyWebUI(&output, data, nil)
+		d.notifyWebUI(output, data, nil)
 		c <- data
 	}
 }

@@ -14,6 +14,6 @@ export interface Notification {
 }
 
 export interface Notifications {
-    Inputs: Notification[];
-    Outputs: Notification[];
+    received: Notification[];
+    sent: Notification[];
 }

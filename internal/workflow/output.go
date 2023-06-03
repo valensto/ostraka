@@ -37,6 +37,16 @@ func UnmarshallOutput(name, destination string, condition *Condition, params any
 	return &o, nil
 }
 
+func WebUIOutput() Output {
+	return Output{
+		Name:        "webui",
+		Destination: SSE,
+		params: SSEParams{
+			Endpoint: "/notifications",
+		},
+	}
+}
+
 func (o *Output) FullName() string {
 	return fmt.Sprintf("[%s] %s", o.Destination, o.Name)
 }

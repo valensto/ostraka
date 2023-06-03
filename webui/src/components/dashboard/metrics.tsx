@@ -56,7 +56,7 @@ export const Metrics: FC<MetricsProps> = ({workflows, notifications}) => {
                     <Activity className="h-4 w-4 text-muted-foreground"/>
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold">+{notifications.Inputs.length || 0}</div>
+                    <div className="text-2xl font-bold">+{notifications.received.length || 0}</div>
                     <p className="text-xs text-muted-foreground">for this session</p>
                 </CardContent>
             </Card>
@@ -77,7 +77,7 @@ export const Metrics: FC<MetricsProps> = ({workflows, notifications}) => {
                     <Activity className="h-4 w-4 text-muted-foreground"/>
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold">+{notifications.Outputs.length || 0}</div>
+                    <div className="text-2xl font-bold">+{notifications.sent.length || 0}</div>
                     <p className="text-xs text-muted-foreground">for this session</p>
                 </CardContent>
             </Card>
