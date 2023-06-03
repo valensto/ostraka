@@ -9,10 +9,10 @@ import (
 
 type Subscriber struct {
 	MQTT
-	input workflow.Input
+	*workflow.Input
 }
 
-func NewSubscriber(input workflow.Input) (*Subscriber, error) {
+func NewSubscriber(input *workflow.Input) (*Subscriber, error) {
 	params, err := input.MQTTParams()
 	if err != nil {
 		return nil, err
@@ -23,7 +23,7 @@ func NewSubscriber(input workflow.Input) (*Subscriber, error) {
 			name:   input.Name,
 			params: params,
 		},
-		input: input,
+		Input: input,
 	}
 
 	err = s.MQTT.connect()
@@ -34,21 +34,21 @@ func NewSubscriber(input workflow.Input) (*Subscriber, error) {
 	return &s, nil
 }
 
-func (m *Subscriber) Subscribe(dispatch func(from workflow.Input, bytes []byte)) error {
-	token := m.client.Subscribe(m.params.Topic, 1, m.eventPubHandler(dispatch))
+func (m *Subscriber) Subscribe(dispatch func(from *workflow.Input, bytes []byte)) error {
+	token := m.client.Subscribe(m.MQTT.params.Topic, 1, m.eventPubHandler(dispatch))
 	token.Wait()
 
 	if token.Error() != nil {
-		return fmt.Errorf("error subscribing to topic: %s", m.params.Topic)
+		return fmt.Errorf("error subscribing to topic: %s", m.MQTT.params.Topic)
 	}
 
-	logger.Get().Info().Msgf("subscriber %s of type MQTT registered. Listening from topic %s", m.name, m.params.Topic)
+	logger.Get().Info().Msgf("subscriber %s of type MQTT registered. Listening from topic %s", m.name, m.MQTT.params.Topic)
 	return nil
 }
 
-func (m *Subscriber) eventPubHandler(dispatch func(from workflow.Input, bytes []byte)) mqtt.MessageHandler {
+func (m *Subscriber) eventPubHandler(dispatch func(from *workflow.Input, bytes []byte)) mqtt.MessageHandler {
 	return func(client mqtt.Client, msg mqtt.Message) {
-		dispatch(m.input, msg.Payload())
+		dispatch(m.Input, msg.Payload())
 		logger.Get().Info().Msgf("Received message: %s from topic: %s", msg.Payload(), msg.Topic())
 	}
 }

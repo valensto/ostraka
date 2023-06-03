@@ -37,8 +37,8 @@ func UnmarshallOutput(name, destination string, condition *Condition, params any
 	return &o, nil
 }
 
-func WebUIOutput() Output {
-	return Output{
+func WebUIOutput() *Output {
+	return &Output{
 		Name:        "webui",
 		Destination: SSE,
 		params: SSEParams{

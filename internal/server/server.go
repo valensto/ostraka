@@ -5,21 +5,20 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
+	"github.com/valensto/ostraka/internal/config/env"
 	"github.com/valensto/ostraka/internal/logger"
-	"github.com/valensto/ostraka/internal/workflow"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
 	"net/http"
 )
 
 type Server struct {
-	Router        *chi.Mux
-	port          string
-	host          string
-	notifications chan []byte
+	Router *chi.Mux
+	Port   string
+	Host   string
 }
 
-func New(port string) *Server {
+func New(config *env.Config) *Server {
 	mux := chi.NewRouter()
 	mux.Use(middleware.Recoverer)
 	mux.Use(middleware.Logger)
@@ -40,20 +39,15 @@ func New(port string) *Server {
 
 	return &Server{
 		Router: mux,
-		port:   port,
-		// TODO: replace localhost by the current host
-		host:          "http://localhost",
-		notifications: make(chan []byte),
+		Port:   config.Port,
+		Host:   config.Host,
 	}
 }
 
-func (s *Server) Run(workflows []*workflow.Workflow) error {
-	// TODO: use config or env var to enable/disable the webui
-	s.serveWebui(workflows)
-
+func (s *Server) Run() error {
 	h2s := &http2.Server{}
 	server := &http.Server{
-		Addr:    ":" + s.port,
+		Addr:    ":" + s.Port,
 		Handler: h2c.NewHandler(s.Router, h2s),
 	}
 	return server.ListenAndServe()

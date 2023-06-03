@@ -12,6 +12,6 @@ services:
       - /ostraka/webui
     working_dir: /ostraka
     ports:
-      - "4000:4000"
+      - "${PORT}:4000"
     env_file:
       - .env

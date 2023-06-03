@@ -11,8 +11,8 @@ import (
 )
 
 type Publisher struct {
-	server        *server.Server
-	name          string
+	server *server.Server
+	*workflow.Output
 	params        workflow.SSEParams
 	clients       map[client]bool
 	connecting    chan client
@@ -23,7 +23,7 @@ type Publisher struct {
 
 type client chan []byte
 
-func NewPublisher(output workflow.Output, server *server.Server) (*Publisher, error) {
+func NewPublisher(output *workflow.Output, server *server.Server) (*Publisher, error) {
 	params, err := output.SSEParams()
 	if err != nil {
 		return nil, err
@@ -31,7 +31,7 @@ func NewPublisher(output workflow.Output, server *server.Server) (*Publisher, er
 
 	o := &Publisher{
 		server:        server,
-		name:          output.Name,
+		Output:        output,
 		params:        params,
 		clients:       make(map[client]bool),
 		connecting:    make(chan client),
@@ -57,7 +57,7 @@ func (o *Publisher) Publish(events <-chan []byte) error {
 		return err
 	}
 
-	logger.Get().Info().Msgf("publisher %s of type SSE registered. Sending to endpoint %s", o.name, o.params.Endpoint)
+	logger.Get().Info().Msgf("publisher %s of type SSE registered. Sending to endpoint %s", o.Output.Name, o.params.Endpoint)
 	return nil
 }
 
@@ -89,6 +89,7 @@ func (o *Publisher) endpoint() http.HandlerFunc {
 				return
 
 			case event := <-cl:
+				// send webui success notification type sent
 				_, _ = w.Write(event)
 				fl.Flush()
 			}

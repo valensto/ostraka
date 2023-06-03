@@ -9,7 +9,7 @@ import (
 )
 
 type subscriber interface {
-	Subscribe(dispatch func(from workflow.Input, bytes []byte)) error
+	Subscribe(dispatch func(from *workflow.Input, bytes []byte)) error
 }
 
 func (d dispatcher) subscribeInputs() error {
@@ -28,7 +28,7 @@ func (d dispatcher) subscribeInputs() error {
 	return nil
 }
 
-func (d dispatcher) getSubscriber(input workflow.Input) (subscriber, error) {
+func (d dispatcher) getSubscriber(input *workflow.Input) (subscriber, error) {
 	switch input.Source {
 	case workflow.Webhook:
 		return webhook.NewSubscriber(input, d.server)

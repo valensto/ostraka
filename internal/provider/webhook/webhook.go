@@ -12,10 +12,10 @@ import (
 type Subscriber struct {
 	server *server.Server
 	params workflow.WebhookParams
-	workflow.Input
+	*workflow.Input
 }
 
-func NewSubscriber(input workflow.Input, server *server.Server) (*Subscriber, error) {
+func NewSubscriber(input *workflow.Input, server *server.Server) (*Subscriber, error) {
 	params, err := input.WebhookParams()
 	if err != nil {
 		return nil, err
@@ -28,7 +28,7 @@ func NewSubscriber(input workflow.Input, server *server.Server) (*Subscriber, er
 	}, nil
 }
 
-func (i *Subscriber) Subscribe(dispatch func(from workflow.Input, bytes []byte)) error {
+func (i *Subscriber) Subscribe(dispatch func(from *workflow.Input, bytes []byte)) error {
 	endpoint := server.Endpoint{
 		Method:  server.POST,
 		Path:    i.params.Endpoint,
@@ -44,7 +44,7 @@ func (i *Subscriber) Subscribe(dispatch func(from workflow.Input, bytes []byte))
 	return nil
 }
 
-func (i *Subscriber) endpoint(dispatch func(from workflow.Input, bytes []byte)) http.HandlerFunc {
+func (i *Subscriber) endpoint(dispatch func(from *workflow.Input, bytes []byte)) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		bytes, err := io.ReadAll(r.Body)
 		if err != nil {

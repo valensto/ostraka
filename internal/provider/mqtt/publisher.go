@@ -7,10 +7,10 @@ import (
 
 type Publisher struct {
 	MQTT
-	output workflow.Output
+	*workflow.Output
 }
 
-func NewPublisher(output workflow.Output) (*Publisher, error) {
+func NewPublisher(output *workflow.Output) (*Publisher, error) {
 	params, err := output.MQTTParams()
 	if err != nil {
 		return nil, err
@@ -21,7 +21,7 @@ func NewPublisher(output workflow.Output) (*Publisher, error) {
 			name:   output.Name,
 			params: params,
 		},
-		output: output,
+		Output: output,
 	}
 
 	err = p.MQTT.connect()
@@ -34,16 +34,16 @@ func NewPublisher(output workflow.Output) (*Publisher, error) {
 
 func (p *Publisher) Publish(events <-chan []byte) error {
 	l := logger.Get()
-	l.Info().Msgf("publisher %s of type MQTT registered. Publishing to topic %s", p.name, p.params.Topic)
+	l.Info().Msgf("publisher %s of type MQTT registered. Publishing to topic %s", p.name, p.MQTT.params.Topic)
 
 	go func() {
 		for {
 			select {
 			case event := <-events:
-				token := p.client.Publish(p.params.Topic, 1, false, event)
+				token := p.client.Publish(p.MQTT.params.Topic, 1, false, event)
 				token.Wait()
 				if token.Error() != nil {
-					l.Error().Msgf("error publishing to topic: %s", p.params.Topic)
+					l.Error().Msgf("error publishing to topic: %s", p.MQTT.params.Topic)
 				}
 			}
 		}
