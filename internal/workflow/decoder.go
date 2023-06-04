@@ -39,7 +39,7 @@ func (d Decoder) Decode(data []byte) (map[string]any, error) {
 		return nil, fmt.Errorf("error decoding event: %w", err)
 	}
 
-	var decoded = map[string]any{}
+	var decoded = make(map[string]any, len(d.event.fields))
 	for _, field := range d.event.fields {
 		sf, ok := d.getSourceFieldByTarget(field.name)
 		if !ok && field.required {

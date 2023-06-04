@@ -4,11 +4,19 @@ const API_URL = process.env.NODE_ENV === 'production' ? '/' : 'http://localhost:
 
 export const getWorkflows = async (): Promise<Workflow[]> => {
     const res = await fetch(`${API_URL}/workflows`);
-    return await res.json();
+    const workflows = await res.json();
+
+    return workflows.map((workflow: Workflow) => ({
+        ...workflow,
+        events: {
+            received: [] as Event[],
+            sent: [] as Event[],
+        }
+    }));
 }
 
-export function syncNotifications(onMessage: (event: MessageEvent) => void): EventSource | null {
-    const eventSource = new EventSource(`${API_URL}/notifications`);
+export function syncEvents(onMessage: (event: MessageEvent) => void): EventSource | null {
+    const eventSource = new EventSource(`${API_URL}/webui/consume`);
     eventSource.onmessage = onMessage;
     return eventSource;
 }

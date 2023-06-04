@@ -42,7 +42,7 @@ func WebUIOutput() *Output {
 		Name:        "webui",
 		Destination: SSE,
 		params: SSEParams{
-			Endpoint: "/notifications",
+			Endpoint: "/webui/consume",
 		},
 	}
 }

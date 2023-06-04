@@ -1,15 +1,11 @@
-import {useCallback, useEffect, useState} from "react";
+import {useEffect, useState} from "react";
 import {MainNav} from "@/components/dashboard/main-nav";
 import {Metrics} from "@/components/dashboard/metrics";
 import {WorkflowTabs} from "./components/dashboard/workflow-tabs";
-import {Notifications, Workflow, Notification} from "./types";
-import {getWorkflows, syncNotifications} from "./lib/api";
+import {Workflow, Event} from "./types";
+import {getWorkflows, syncEvents} from "./lib/api";
 
 export default function App() {
-    const [notifications, setNotifications] = useState<Notifications>({
-        received: [],
-        sent: [],
-    })
     const [workflows, setWorkflows] = useState<Workflow[]>([])
 
     useEffect(() => {
@@ -18,13 +14,30 @@ export default function App() {
         }).catch((err) => {
             console.error(err)
         })
+    }, [])
 
-        const sync = syncNotifications((event: MessageEvent) => {
-            const data = JSON.parse(event.data) as Notification
-            setNotifications(prevState => ({
-                ...prevState,
-                [data.action]: [...prevState[data.action], data]
-            }))
+    useEffect(() => {
+        const sync = syncEvents((event: MessageEvent) => {
+            const data = JSON.parse(event.data) as Event
+
+            setWorkflows(prevState => {
+                return prevState.map((workflow) => {
+                    if (workflow.slug === data.workflow_slug) {
+                        const updatedEvents = {
+                            ...workflow.events,
+                            [data.action]: [
+                                ...(workflow.events[data.action] || []),
+                                data
+                            ]
+                        };
+                        return {
+                            ...workflow,
+                            events: updatedEvents
+                        };
+                    }
+                    return workflow;
+                });
+            });
         })
 
         return () => {
@@ -43,8 +56,8 @@ export default function App() {
                 <div className="flex items-center justify-between space-y-2">
                     <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
                 </div>
-                <Metrics workflows={workflows} notifications={notifications}/>
-                <WorkflowTabs/>
+                <Metrics workflows={workflows}/>
+                <WorkflowTabs workflows={workflows}/>
             </div>
         </div>
     );

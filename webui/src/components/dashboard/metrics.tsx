@@ -6,20 +6,26 @@ import {
     CardHeader,
     CardTitle,
 } from "@/components/ui/card";
-import {Workflow, Notifications} from "@/types"
+import {Workflow} from "@/types"
 
 interface MetricsProps {
     workflows: Workflow[]
-    notifications: Notifications
 }
 
 interface counter {
     Inputs: number
     Outputs: number
+    InputsEvents: number
+    OutputsEvents: number
 }
 
-export const Metrics: FC<MetricsProps> = ({workflows, notifications}) => {
-    const [counter, setCounter] = useState<counter>({Inputs: 0, Outputs: 0})
+export const Metrics: FC<MetricsProps> = ({workflows}) => {
+    const [counter, setCounter] = useState<counter>({
+        Inputs: 0,
+        Outputs: 0,
+        InputsEvents: 0,
+        OutputsEvents: 0
+    })
 
     useEffect(() => {
         if (workflows.length === 0) {
@@ -34,7 +40,13 @@ export const Metrics: FC<MetricsProps> = ({workflows, notifications}) => {
             outputs += workflow.nb_outputs
         })
 
-        setCounter({Inputs: inputs, Outputs: outputs})
+        setCounter(prevState => {
+            return {
+                ...prevState,
+                Inputs: inputs,
+                Outputs: outputs
+            }
+        })
     }, [workflows])
 
     return (
@@ -56,7 +68,7 @@ export const Metrics: FC<MetricsProps> = ({workflows, notifications}) => {
                     <Activity className="h-4 w-4 text-muted-foreground"/>
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold">+{notifications.received.length || 0}</div>
+                    <div className="text-2xl font-bold">+{0}</div>
                     <p className="text-xs text-muted-foreground">for this session</p>
                 </CardContent>
             </Card>
@@ -77,7 +89,7 @@ export const Metrics: FC<MetricsProps> = ({workflows, notifications}) => {
                     <Activity className="h-4 w-4 text-muted-foreground"/>
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold">+{notifications.sent.length || 0}</div>
+                    <div className="text-2xl font-bold">+{0}</div>
                     <p className="text-xs text-muted-foreground">for this session</p>
                 </CardContent>
             </Card>

@@ -1,49 +1,70 @@
 import {
-  Table,
-  TableBody,
-  TableCaption,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+    Table,
+    TableBody,
+    TableCaption,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
 } from "@/components/ui/table";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import {ScrollArea} from "@/components/ui/scroll-area";
+import {FC} from "react";
+import {Event} from "../../types";
 
-export function EventsTable() {
-  return (
-    <ScrollArea className="h-[700px] rounded-md border">
-      <Table>
-        <TableCaption>A list of your recent invoices.</TableCaption>
-        <TableHeader>
-          <TableRow>
-            <TableHead className="w-[100px]">Invoice</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Method</TableHead>
-            <TableHead className="text-right">Amount</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {invoices.map((invoice) => (
-            <TableRow key={invoice.invoice}>
-              <TableCell className="font-medium">{invoice.invoice}</TableCell>
-              <TableCell>{invoice.paymentStatus}</TableCell>
-              <TableCell>{invoice.paymentMethod}</TableCell>
-              <TableCell className="text-right">
-                {invoice.totalAmount}
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </ScrollArea>
-  );
+interface TableProps {
+    events: Event[]
 }
 
-const invoices = [
-  {
-    invoice: "INV001",
-    paymentStatus: "Paid",
-    totalAmount: "$250.00",
-    paymentMethod: "Credit Card",
-  },
-];
+export const InputTable: FC<TableProps> = ({events}) => {
+    return (
+        <ScrollArea className="h-[700px] rounded-md border">
+            <Table>
+                <TableCaption>A list of your session inputs events.</TableCaption>
+                <TableHeader>
+                    <TableRow>
+                        <TableHead>From</TableHead>
+                        <TableHead>Payload</TableHead>
+                        <TableHead>Status</TableHead>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                    {events.map((event, k) => (
+                        <TableRow key={k}>
+                            <TableCell className="font-medium">{event.notifier}</TableCell>
+                            <TableCell>{event.data}</TableCell>
+                            <TableCell>
+                                {event.state}
+                                {event.message ? <br/> : ""}
+                                {event.message}
+                            </TableCell>
+                        </TableRow>
+                    ))}
+                </TableBody>
+            </Table>
+        </ScrollArea>
+    );
+}
+
+export const OutputTable: FC<TableProps> = ({events}) => {
+    return (
+        <ScrollArea className="h-[700px] rounded-md border">
+            <Table>
+                <TableCaption>A list of your session outputs events.</TableCaption>
+                <TableHeader>
+                    <TableRow>
+                        <TableHead>To</TableHead>
+                        <TableHead>Payload</TableHead>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                    {events.map((event, k) => (
+                        <TableRow key={k}>
+                            <TableCell className="font-medium">{event.notifier}</TableCell>
+                            <TableCell>{event.data}</TableCell>
+                        </TableRow>
+                    ))}
+                </TableBody>
+            </Table>
+        </ScrollArea>
+    );
+}

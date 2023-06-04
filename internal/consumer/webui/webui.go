@@ -27,7 +27,7 @@ func New(config env.Webui, server *server.Server, workflows []*workflow.Workflow
 	}
 
 	server.Router.Handle("/assets/*", http.StripPrefix("/assets/", http.FileServer(http.Dir("webui/dist/assets"))))
-	server.Router.Get("/admin/dashboard", webui.basicAuth(webui.dashboard()))
+	server.Router.Get("/webui/dashboard", webui.basicAuth(webui.dashboard()))
 	server.Router.Get("/workflows", webui.workflows(workflows))
 
 	output := workflow.WebUIOutput()
@@ -36,7 +36,7 @@ func New(config env.Webui, server *server.Server, workflows []*workflow.Workflow
 		return nil, fmt.Errorf("error getting publisher: %w", err)
 	}
 
-	logger.Get().Info().Msgf("webui running on %s:%s/admin/dashboard", webui.server.Host, webui.server.Port)
+	logger.Get().Info().Msgf("webui running on %s:%s/webui/dashboard", webui.server.Host, webui.server.Port)
 	return webui, p.Publish(webui.events)
 }
 

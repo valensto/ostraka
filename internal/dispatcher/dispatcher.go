@@ -30,7 +30,7 @@ func Dispatch(config *env.Config, workflows []*workflow.Workflow) error {
 			workflow:  wf,
 			server:    s,
 			outputs:   make(map[*workflow.Output]chan []byte, len(wf.Outputs)),
-			collector: collector.New(wf.Name, consumer),
+			collector: collector.New(wf.Slug, consumer),
 		}
 
 		err := d.subscribeInputs()
@@ -48,12 +48,10 @@ func Dispatch(config *env.Config, workflows []*workflow.Workflow) error {
 }
 
 func (d dispatcher) dispatch(from *workflow.Input, data []byte) {
-	var err error
-	defer d.collector.Collect(from, data, err)
-
 	event, err := from.Decoder.Decode(data)
 	if err != nil {
 		err = fmt.Errorf("error decoding input %s: %s", from.Name, err)
+		d.collector.Collect(from, data, err)
 		logger.Get().Error().Msg(err.Error())
 		return
 	}
@@ -61,6 +59,7 @@ func (d dispatcher) dispatch(from *workflow.Input, data []byte) {
 	marshalled, err := json.Marshal(event)
 	if err != nil {
 		err = fmt.Errorf("error marshaling event: %s", err)
+		d.collector.Collect(from, data, err)
 		logger.Get().Error().Msg(err.Error())
 		return
 	}
@@ -68,11 +67,13 @@ func (d dispatcher) dispatch(from *workflow.Input, data []byte) {
 	for output, c := range d.outputs {
 		if !output.Condition.Match(event) {
 			err = fmt.Errorf("event not matching output %s conditions", output.Name)
+			d.collector.Collect(from, data, err)
 			logger.Get().Info().Msg(err.Error())
 			continue
 		}
 
-		d.collector.Collect(output, data, nil)
+		d.collector.Collect(from, data, nil)
+		d.collector.Collect(output, marshalled, nil)
 		c <- marshalled
 	}
 }
