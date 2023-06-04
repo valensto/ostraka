@@ -27,10 +27,10 @@ const (
 )
 
 type Event struct {
-	WorkflowName string `json:"workflow_name"`
+	WorkflowSlug string `json:"workflow_slug"`
 	Action       action `json:"action"`
 	Notifier     string `json:"notifier"`
-	Data         []byte `json:"data"`
+	Data         string `json:"data"`
 	State        state  `json:"state"`
 	Message      string `json:"message"`
 }

@@ -72,13 +72,13 @@ func (sc conditionModel) toCondition() (*workflow.Condition, error) {
 
 func (se eventModel) toEvent() (*workflow.Event, error) {
 	fields := make([]workflow.Field, len(se.Fields))
-	for _, sf := range se.Fields {
+	for i, sf := range se.Fields {
 		f, err := workflow.UnmarshallField(sf.Name, sf.DataType, sf.Required)
 		if err != nil {
 			return nil, err
 		}
 
-		fields = append(fields, f)
+		fields[i] = f
 	}
 
 	return workflow.UnmarshallEvent(se.Format, fields...)

@@ -5,23 +5,23 @@ import (
 	"github.com/valensto/ostraka/internal/workflow"
 )
 
-type Consumer interface {
+type consumer interface {
 	Consume(bytes []byte)
 }
 
-type Notifier interface {
+type notifier interface {
 	FullName() string
 }
 
 type Collector struct {
-	WorkflowName string
-	Consumers    []Consumer
+	WorkflowSlug string
+	Consumers    []consumer
 	Queue        chan Event
 }
 
-func New(workflowName string, consumers ...Consumer) *Collector {
+func New(workflowSlug string, consumers ...consumer) *Collector {
 	c := &Collector{
-		WorkflowName: workflowName,
+		WorkflowSlug: workflowSlug,
 		Queue:        make(chan Event),
 		Consumers:    consumers,
 	}
@@ -30,7 +30,24 @@ func New(workflowName string, consumers ...Consumer) *Collector {
 	return c
 }
 
-func (c *Collector) Collect(notifier Notifier, data []byte, err error) {
+func (c *Collector) broadcast() {
+	if len(c.Consumers) == 0 {
+		return
+	}
+
+	go func() {
+		for {
+			select {
+			case event := <-c.Queue:
+				for _, consumer := range c.Consumers {
+					consumer.Consume(event.marshall())
+				}
+			}
+		}
+	}()
+}
+
+func (c *Collector) Collect(notifier notifier, data []byte, err error) {
 	if len(c.Consumers) == 0 {
 		return
 	}
@@ -52,30 +69,13 @@ func (c *Collector) Collect(notifier Notifier, data []byte, err error) {
 	}
 
 	n := Event{
-		WorkflowName: c.WorkflowName,
+		WorkflowSlug: c.WorkflowSlug,
 		Action:       nAction,
 		Notifier:     notifier.FullName(),
-		Data:         data,
+		Data:         string(data),
 		State:        nStatus,
 		Message:      "message",
 	}
 
 	c.Queue <- n
-}
-
-func (c *Collector) broadcast() {
-	if len(c.Consumers) == 0 {
-		return
-	}
-
-	go func() {
-		for {
-			select {
-			case event := <-c.Queue:
-				for _, consumer := range c.Consumers {
-					consumer.Consume(event.marshall())
-				}
-			}
-		}
-	}()
 }
