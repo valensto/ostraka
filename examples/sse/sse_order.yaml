@@ -1,3 +1,5 @@
+name: incoming-orders
+
 event:
   format: json
   fields:
