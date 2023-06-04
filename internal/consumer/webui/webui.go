@@ -28,7 +28,7 @@ func New(config env.Webui, server *server.Server, workflows []*workflow.Workflow
 
 	server.Router.Handle("/assets/*", http.StripPrefix("/assets/", http.FileServer(http.Dir("webui/dist/assets"))))
 	server.Router.Get("/webui/dashboard", webui.basicAuth(webui.dashboard()))
-	server.Router.Get("/workflows", webui.workflows(workflows))
+	server.Router.Get("/webui/workflows", webui.workflows(workflows))
 
 	output := workflow.WebUIOutput()
 	p, err := sse.NewPublisher(output, server)

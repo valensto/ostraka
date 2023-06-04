@@ -1,9 +1,9 @@
-import {Workflow} from "../types";
+import {Workflow} from "@/types";
 
-const API_URL = process.env.NODE_ENV === 'production' ? '/' : 'http://localhost:4000';
+const BASE_URL = process.env.NODE_ENV !== 'production' ? 'http://localhost:4000' : "";
 
 export const getWorkflows = async (): Promise<Workflow[]> => {
-    const res = await fetch(`${API_URL}/workflows`);
+    const res = await fetch(`${BASE_URL}/webui/workflows`);
     const workflows = await res.json();
 
     return workflows.map((workflow: Workflow) => ({
@@ -16,7 +16,7 @@ export const getWorkflows = async (): Promise<Workflow[]> => {
 }
 
 export function syncEvents(onMessage: (event: MessageEvent) => void): EventSource | null {
-    const eventSource = new EventSource(`${API_URL}/webui/consume`);
+    const eventSource = new EventSource(`${BASE_URL}/webui/consume`);
     eventSource.onmessage = onMessage;
     return eventSource;
 }
