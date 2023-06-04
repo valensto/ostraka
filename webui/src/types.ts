@@ -7,6 +7,7 @@ export interface Workflow {
 }
 
 export interface Event {
+    id: string;
     workflow_slug: string;
     action: "received" | "sent";
     notifier: string;

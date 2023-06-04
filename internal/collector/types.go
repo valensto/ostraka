@@ -27,6 +27,7 @@ const (
 )
 
 type Event struct {
+	Id           string `json:"id"`
 	WorkflowSlug string `json:"workflow_slug"`
 	Action       action `json:"action"`
 	Notifier     string `json:"notifier"`
