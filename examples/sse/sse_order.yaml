@@ -1,4 +1,6 @@
-event:
+name: incoming-orders
+
+event_type:
   format: json
   fields:
     - name: customerId

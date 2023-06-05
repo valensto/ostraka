@@ -1,24 +1,29 @@
 package main
 
 import (
-	"context"
+	"github.com/valensto/ostraka/internal/config/env"
 	"github.com/valensto/ostraka/internal/config/static/local"
 	"github.com/valensto/ostraka/internal/dispatcher"
 	"github.com/valensto/ostraka/internal/logger"
 )
 
 func main() {
-	port := "4000"
-	logger.Banner(port)
-
-	if err := run(port); err != nil {
+	logger.Banner()
+	if err := run(); err != nil {
 		logger.Get().Fatal().Msg(err.Error())
 	}
 }
 
-func run(port string) error {
-	ctx := context.Background()
-	extractor := local.New(".ostraka/workflows")
+func run() error {
+	config, err := env.Load()
+	if err != nil {
+		return err
+	}
 
-	return dispatcher.Dispatch(ctx, extractor, port)
+	workflows, err := local.Extract(".ostraka/workflows")
+	if err != nil {
+		return err
+	}
+
+	return dispatcher.Dispatch(config, workflows)
 }

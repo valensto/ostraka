@@ -10,9 +10,9 @@ import (
 	"github.com/valensto/ostraka/internal/workflow"
 )
 
-type SSE struct {
-	server        *server.Server
-	name          string
+type Publisher struct {
+	server *server.Server
+	*workflow.Output
 	params        workflow.SSEParams
 	clients       map[client]bool
 	connecting    chan client
@@ -23,15 +23,15 @@ type SSE struct {
 
 type client chan []byte
 
-func New(output workflow.Output, server *server.Server) (*SSE, error) {
+func NewPublisher(output *workflow.Output, server *server.Server) (*Publisher, error) {
 	params, err := output.SSEParams()
 	if err != nil {
 		return nil, err
 	}
 
-	o := &SSE{
+	o := &Publisher{
 		server:        server,
-		name:          output.Name,
+		Output:        output,
 		params:        params,
 		clients:       make(map[client]bool),
 		connecting:    make(chan client),
@@ -43,7 +43,7 @@ func New(output workflow.Output, server *server.Server) (*SSE, error) {
 	return o, nil
 }
 
-func (o *SSE) Register(events <-chan []byte) error {
+func (o *Publisher) Publish(events <-chan []byte) error {
 	endpoint := server.Endpoint{
 		Method:  server.GET,
 		Path:    o.params.Endpoint,
@@ -57,11 +57,11 @@ func (o *SSE) Register(events <-chan []byte) error {
 		return err
 	}
 
-	logger.Get().Info().Msgf("output %s of type SSE registered. Sending to endpoint %s", o.name, o.params.Endpoint)
+	logger.Get().Info().Msgf("publisher %s of type SSE registered. Sending to endpoint %s", o.Output.Name, o.params.Endpoint)
 	return nil
 }
 
-func (o *SSE) endpoint() http.HandlerFunc {
+func (o *Publisher) endpoint() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		fl, ok := w.(http.Flusher)
 		if !ok {
@@ -89,6 +89,7 @@ func (o *SSE) endpoint() http.HandlerFunc {
 				return
 
 			case event := <-cl:
+				// send webui success notification type sent
 				_, _ = w.Write(event)
 				fl.Flush()
 			}
@@ -96,7 +97,7 @@ func (o *SSE) endpoint() http.HandlerFunc {
 	}
 }
 
-func (o *SSE) listen(events <-chan []byte) {
+func (o *Publisher) listen(events <-chan []byte) {
 	go func() {
 		for {
 			select {

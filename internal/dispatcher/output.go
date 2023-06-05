@@ -7,39 +7,35 @@ import (
 	"github.com/valensto/ostraka/internal/workflow"
 )
 
-type Publisher interface {
-	Register(events <-chan []byte) error
+type publisher interface {
+	Publish(events <-chan []byte) error
 }
 
 func (d dispatcher) registerOutputs() error {
 	for _, output := range d.workflow.Outputs {
-		d.outputEvents[output.Name] = make(chan []byte)
+		d.outputs[output] = make(chan []byte)
 
-		publisher, err := d.getOutputProvider(output)
+		p, err := d.getPublisher(output)
 		if err != nil {
-			return fmt.Errorf("error getting output publisher: %w", err)
+			return fmt.Errorf("error getting publisher: %w", err)
 		}
 
-		err = publisher.Register(d.outputEvents[output.Name])
+		err = p.Publish(d.outputs[output])
 		if err != nil {
-			return fmt.Errorf("error registering SSE output: %w", err)
+			return fmt.Errorf("error registering publisher: %w", err)
 		}
 	}
 
 	return nil
 }
 
-func (d dispatcher) getOutputProvider(o workflow.Output) (Publisher, error) {
-	switch o.Destination {
+func (d dispatcher) getPublisher(output *workflow.Output) (publisher, error) {
+	switch output.Destination {
 	case workflow.SSE:
-		return sse.New(o, d.server)
+		return sse.NewPublisher(output, d.server)
 	case workflow.MQTTPub:
-		params, err := o.MQTTParams()
-		if err != nil {
-			return nil, err
-		}
-		return mqtt.New(o.Name, params)
+		return mqtt.NewPublisher(output)
 	default:
-		return nil, fmt.Errorf("unknown output type: %s", o.Destination)
+		return nil, fmt.Errorf("unknown output type: %s", output.Destination)
 	}
 }

@@ -5,10 +5,6 @@ import (
 	"fmt"
 )
 
-type outputType interface {
-	SSEParams
-}
-
 type Output struct {
 	Name        string
 	Destination Destination
@@ -41,6 +37,24 @@ func UnmarshallOutput(name, destination string, condition *Condition, params any
 	return &o, nil
 }
 
+func (o *Output) GetName() string {
+	return o.Name
+}
+
+func (o *Output) GetProvider() string {
+	return o.Destination.String()
+}
+
+func WebUIOutput() *Output {
+	return &Output{
+		Name:        "webui",
+		Destination: SSE,
+		params: SSEParams{
+			Endpoint: "/webui/consume",
+		},
+	}
+}
+
 func (o *Output) unmarshallParams() error {
 	marshalled, err := json.Marshal(o.params)
 	if err != nil {
@@ -63,26 +77,4 @@ func (o *Output) unmarshallParams() error {
 
 	o.params = params
 	return params.validate()
-}
-
-func (o *Output) SSEParams() (SSEParams, error) {
-	params, ok := o.params.(SSEParams)
-	if !ok {
-		return SSEParams{}, fmt.Errorf("output params are not of type SSEParams")
-	}
-
-	return params, nil
-}
-
-func (o *Output) MQTTParams() (MQTTParams, error) {
-	if o.Destination != MQTTPub {
-		return MQTTParams{}, fmt.Errorf("output source is not MQTT")
-	}
-
-	params, ok := o.params.(MQTTParams)
-	if !ok {
-		return MQTTParams{}, fmt.Errorf("input params are not of type MQTTParams")
-	}
-
-	return params, nil
 }

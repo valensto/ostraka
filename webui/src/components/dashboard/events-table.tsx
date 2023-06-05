@@ -1,223 +1,106 @@
 import {
-  Table,
-  TableBody,
-  TableCaption,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+    Table,
+    TableBody,
+    TableCaption,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
 } from "@/components/ui/table";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import {ScrollArea} from "@/components/ui/scroll-area";
+import {FC} from "react";
+import {Event} from "@/types";
+import {ArrowRightFromLine, CircleSlash, Info} from "lucide-react";
 
-export function EventsTable() {
-  return (
-    <ScrollArea className="h-[700px] rounded-md border">
-      <Table>
-        <TableCaption>A list of your recent invoices.</TableCaption>
-        <TableHeader>
-          <TableRow>
-            <TableHead className="w-[100px]">Invoice</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Method</TableHead>
-            <TableHead className="text-right">Amount</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {invoices.map((invoice) => (
-            <TableRow key={invoice.invoice}>
-              <TableCell className="font-medium">{invoice.invoice}</TableCell>
-              <TableCell>{invoice.paymentStatus}</TableCell>
-              <TableCell>{invoice.paymentMethod}</TableCell>
-              <TableCell className="text-right">
-                {invoice.totalAmount}
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </ScrollArea>
-  );
+interface TableProps {
+    events: Event[]
+    selectedRow?: string
+    selectRow: (row: string) => void
 }
 
-const invoices = [
-  {
-    invoice: "INV001",
-    paymentStatus: "Paid",
-    totalAmount: "$250.00",
-    paymentMethod: "Credit Card",
-  },
-  {
-    invoice: "INV002",
-    paymentStatus: "Pending",
-    totalAmount: "$150.00",
-    paymentMethod: "PayPal",
-  },
-  {
-    invoice: "INV003",
-    paymentStatus: "Unpaid",
-    totalAmount: "$350.00",
-    paymentMethod: "Bank Transfer",
-  },
-  {
-    invoice: "INV004",
-    paymentStatus: "Paid",
-    totalAmount: "$450.00",
-    paymentMethod: "Credit Card",
-  },
-  {
-    invoice: "INV005",
-    paymentStatus: "Paid",
-    totalAmount: "$550.00",
-    paymentMethod: "PayPal",
-  },
-  {
-    invoice: "INV006",
-    paymentStatus: "Pending",
-    totalAmount: "$200.00",
-    paymentMethod: "Bank Transfer",
-  },
-  {
-    invoice: "INV007",
-    paymentStatus: "Unpaid",
-    totalAmount: "$300.00",
-    paymentMethod: "Credit Card",
-  },
-  {
-    invoice: "INV006",
-    paymentStatus: "Pending",
-    totalAmount: "$200.00",
-    paymentMethod: "Bank Transfer",
-  },
-  {
-    invoice: "INV007",
-    paymentStatus: "Unpaid",
-    totalAmount: "$300.00",
-    paymentMethod: "Credit Card",
-  },
-  {
-    invoice: "INV006",
-    paymentStatus: "Pending",
-    totalAmount: "$200.00",
-    paymentMethod: "Bank Transfer",
-  },
-  {
-    invoice: "INV007",
-    paymentStatus: "Unpaid",
-    totalAmount: "$300.00",
-    paymentMethod: "Credit Card",
-  },
-  {
-    invoice: "INV006",
-    paymentStatus: "Pending",
-    totalAmount: "$200.00",
-    paymentMethod: "Bank Transfer",
-  },
-  {
-    invoice: "INV007",
-    paymentStatus: "Unpaid",
-    totalAmount: "$300.00",
-    paymentMethod: "Credit Card",
-  },
-  {
-    invoice: "INV006",
-    paymentStatus: "Pending",
-    totalAmount: "$200.00",
-    paymentMethod: "Bank Transfer",
-  },
-  {
-    invoice: "INV007",
-    paymentStatus: "Unpaid",
-    totalAmount: "$300.00",
-    paymentMethod: "Credit Card",
-  },
-  {
-    invoice: "INV001",
-    paymentStatus: "Paid",
-    totalAmount: "$250.00",
-    paymentMethod: "Credit Card",
-  },
-  {
-    invoice: "INV002",
-    paymentStatus: "Pending",
-    totalAmount: "$150.00",
-    paymentMethod: "PayPal",
-  },
-  {
-    invoice: "INV003",
-    paymentStatus: "Unpaid",
-    totalAmount: "$350.00",
-    paymentMethod: "Bank Transfer",
-  },
-  {
-    invoice: "INV004",
-    paymentStatus: "Paid",
-    totalAmount: "$450.00",
-    paymentMethod: "Credit Card",
-  },
-  {
-    invoice: "INV005",
-    paymentStatus: "Paid",
-    totalAmount: "$550.00",
-    paymentMethod: "PayPal",
-  },
-  {
-    invoice: "INV006",
-    paymentStatus: "Pending",
-    totalAmount: "$200.00",
-    paymentMethod: "Bank Transfer",
-  },
-  {
-    invoice: "INV007",
-    paymentStatus: "Unpaid",
-    totalAmount: "$300.00",
-    paymentMethod: "Credit Card",
-  },
-  {
-    invoice: "INV006",
-    paymentStatus: "Pending",
-    totalAmount: "$200.00",
-    paymentMethod: "Bank Transfer",
-  },
-  {
-    invoice: "INV007",
-    paymentStatus: "Unpaid",
-    totalAmount: "$300.00",
-    paymentMethod: "Credit Card",
-  },
-  {
-    invoice: "INV006",
-    paymentStatus: "Pending",
-    totalAmount: "$200.00",
-    paymentMethod: "Bank Transfer",
-  },
-  {
-    invoice: "INV007",
-    paymentStatus: "Unpaid",
-    totalAmount: "$300.00",
-    paymentMethod: "Credit Card",
-  },
-  {
-    invoice: "INV006",
-    paymentStatus: "Pending",
-    totalAmount: "$200.00",
-    paymentMethod: "Bank Transfer",
-  },
-  {
-    invoice: "INV007",
-    paymentStatus: "Unpaid",
-    totalAmount: "$300.00",
-    paymentMethod: "Credit Card",
-  },
-  {
-    invoice: "INV006",
-    paymentStatus: "Pending",
-    totalAmount: "$200.00",
-    paymentMethod: "Bank Transfer",
-  },
-  {
-    invoice: "INV007",
-    paymentStatus: "Unpaid",
-    totalAmount: "$300.00",
-    paymentMethod: "Credit Card",
-  },
-];
+const statusIcon = (status: string) => {
+    switch (status) {
+        case "succeed":
+            return <span className="text-green-500"><ArrowRightFromLine style={{display: "inline-block"}}/></span>
+        case "failed":
+            return <span className="text-red-500"><CircleSlash style={{display: "inline-block"}}/></span>
+        default:
+            return <span className="text-gray-500"><Info style={{display: "inline-block"}}/></span>
+    }
+}
+
+export const InputTable: FC<TableProps> = ({events, selectedRow, selectRow}) => {
+    return (
+        <ScrollArea className="h-[700px] rounded-md border">
+            <Table>
+                <TableCaption>A list of your session inputs events.</TableCaption>
+                <TableHeader>
+                    <TableRow>
+                        <TableHead className="w-[150px]">From</TableHead>
+                        <TableHead>Event</TableHead>
+                        <TableHead>Message</TableHead>
+                        <TableHead className="text-right">Status</TableHead>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                    {events.map((event, k) => (
+                        <TableRow
+                            key={k}
+                            onClick={() => selectRow(event.related_id)}
+                            className={selectedRow === event.related_id ? "bg-clip-border border-4 border-violet-300 border-solid" : ""
+                        }>
+                            <TableCell className="font-medium">
+                                {event.related_id}
+                                <br/>
+                                {event.notifier}
+                            </TableCell>
+                            <TableCell>
+                                <pre>{JSON.stringify(JSON.parse(event.data), null, 2)}</pre>
+                            </TableCell>
+                            <TableCell>{event.message}</TableCell>
+                            <TableCell className="text-right">
+                                {statusIcon(event.state)}
+                            </TableCell>
+                        </TableRow>
+                    ))}
+                </TableBody>
+            </Table>
+        </ScrollArea>
+    );
+}
+
+export const OutputTable: FC<TableProps> = ({events, selectedRow, selectRow}) => {
+    return (
+        <ScrollArea className="h-[700px] rounded-md border">
+            <Table>
+                <TableCaption>A list of your session outputs events.</TableCaption>
+                <TableHeader>
+                    <TableRow>
+                        <TableHead>To</TableHead>
+                        <TableHead>Payload</TableHead>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                    {events.map((event, k) => (
+                        <TableRow
+                            key={k}
+                            onClick={() => selectRow(event.related_id)}
+                            className={selectedRow === event.related_id ? "bg-clip-border border-4 border-violet-300 border-solid" : ""
+                        }>
+                            <TableCell className="font-medium">
+                                {event.related_id}
+                                <br/>
+                                {event.notifier}
+                            </TableCell>
+                            <TableCell>
+                                <pre>
+                                      {JSON.stringify(JSON.parse(event.data),null,2)}
+                                </pre>
+                            </TableCell>
+                        </TableRow>
+                    ))}
+                </TableBody>
+            </Table>
+        </ScrollArea>
+    );
+}

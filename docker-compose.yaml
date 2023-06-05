@@ -6,12 +6,12 @@ services:
       context: .
       dockerfile: dev.Dockerfile
       target: builder
-    container_name: ostraka-service
+    container_name: ostraka-core
     volumes:
       - .:/ostraka
       - /ostraka/webui
     working_dir: /ostraka
     ports:
-      - "4000:4000"
+      - "${PORT}:4000"
     env_file:
       - .env

@@ -12,7 +12,7 @@ type Input struct {
 	params  any
 }
 
-func UnmarshallInput(name, source string, decoder Decoder, params any, event *Event) (*Input, error) {
+func UnmarshallInput(name, source string, decoder Decoder, params any, event *EventType) (*Input, error) {
 	src, err := getSource(source)
 	if err != nil {
 		return nil, err
@@ -33,7 +33,15 @@ func UnmarshallInput(name, source string, decoder Decoder, params any, event *Ev
 	return i, nil
 }
 
-func (i *Input) unmarshallParams(e *Event) error {
+func (i *Input) GetName() string {
+	return i.Name
+}
+
+func (i *Input) GetProvider() string {
+	return i.Source.String()
+}
+
+func (i *Input) unmarshallParams(e *EventType) error {
 	marshalled, err := json.Marshal(i.params)
 	if err != nil {
 		return fmt.Errorf("error marshalling input params: %w", err)
@@ -65,30 +73,4 @@ func (i *Input) unmarshallParams(e *Event) error {
 	i.Decoder.event = e
 
 	return params.validate()
-}
-
-func (i *Input) WebhookParams() (WebhookParams, error) {
-	if i.Source != Webhook {
-		return WebhookParams{}, fmt.Errorf("input source is not Webhook")
-	}
-
-	params, ok := i.params.(WebhookParams)
-	if !ok {
-		return WebhookParams{}, fmt.Errorf("input params are not of type WebhookParams")
-	}
-
-	return params, nil
-}
-
-func (i *Input) MQTTParams() (MQTTParams, error) {
-	if i.Source != MQTTSub {
-		return MQTTParams{}, fmt.Errorf("input source is not MQTT")
-	}
-
-	params, ok := i.params.(MQTTParams)
-	if !ok {
-		return MQTTParams{}, fmt.Errorf("input params are not of type MQTTParams")
-	}
-
-	return params, nil
 }

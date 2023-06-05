@@ -1,31 +1,29 @@
 package mqtt
 
 import (
-	"encoding/json"
 	"fmt"
+	"github.com/google/uuid"
 	"github.com/valensto/ostraka/internal/logger"
 	"time"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
-	"github.com/google/uuid"
-
 	"github.com/valensto/ostraka/internal/workflow"
 )
 
 type MQTT struct {
 	client    mqtt.Client
 	connected chan bool
-	params    workflow.MQTTParams
 	name      string
+	params    workflow.MQTTParams
 }
 
-func New(name string, params workflow.MQTTParams) (*MQTT, error) {
+func (m *MQTT) connect() error {
 	opts := mqtt.NewClientOptions()
-	opts.AddBroker(params.Broker)
+	opts.AddBroker(m.params.Broker)
 	opts.SetClientID(fmt.Sprintf("%s-%s", uuid.New(), "ostraka"))
-	opts.SetUsername(params.User)
-	opts.SetPassword(params.Password)
-	opts.SetAutoReconnect(params.AutoReconnect)
+	opts.SetUsername(m.params.User)
+	opts.SetPassword(m.params.Password)
+	opts.SetAutoReconnect(m.params.AutoReconnect)
 	opts.SetDefaultPublishHandler(defaultPubHandler)
 
 	opts.OnConnect = connectHandler
@@ -33,30 +31,25 @@ func New(name string, params workflow.MQTTParams) (*MQTT, error) {
 
 	client := mqtt.NewClient(opts)
 	if token := client.Connect(); token.Wait() && token.Error() != nil {
-		return nil, fmt.Errorf("error connecting to mqtt broker: %w", token.Error())
+		return fmt.Errorf("error connecting to mqtt broker: %w", token.Error())
 	}
 
-	c := &MQTT{
-		name:      name,
-		params:    params,
-		client:    client,
-		connected: make(chan bool),
+	m.client = client
+
+	if m.params.KeepAlive {
+		go m.keepalive()
 	}
 
-	if params.KeepAlive {
-		go c.keepalive()
-	}
-
-	return c, nil
+	return nil
 }
 
-func (c *MQTT) keepalive() {
+func (m *MQTT) keepalive() {
 	const period = 2 * time.Second
 	var up, closed bool
 	log := logger.Get()
 	for {
 		select {
-		case up, closed = <-c.connected:
+		case up, closed = <-m.connected:
 			if !closed {
 				return
 			}
@@ -66,59 +59,12 @@ func (c *MQTT) keepalive() {
 				continue
 			}
 
-			logger.Get().Info().Msgf("%s send mqtt keep-alive", c.name)
-			if token := c.client.Publish("ping_topic", 0, false, "ping"); token.Wait() && token.Error() != nil {
-				log.Warn().Msgf("%s mqtt keep-alive failed: %s", c.name, token.Error())
+			logger.Get().Info().Msgf("%s send mqtt keep-alive", m.name)
+			if token := m.client.Publish("ping_topic", 0, false, "ping"); token.Wait() && token.Error() != nil {
+				log.Warn().Msgf("%s mqtt keep-alive failed: %s", m.name, token.Error())
 			}
 			break
 		}
-	}
-
-}
-
-func (c *MQTT) Subscribe(events chan<- map[string]any) error {
-	token := c.client.Subscribe(c.params.Topic, 1, c.eventPubHandler(events))
-	token.Wait()
-
-	if token.Error() != nil {
-		return fmt.Errorf("error subscribing to topic: %s", c.params.Topic)
-	}
-
-	logger.Get().Info().Msgf("input %s of type MQTT registered. Listening from topic %s", c.name, c.params.Topic)
-	return nil
-}
-
-func (c *MQTT) Register(events <-chan []byte) error {
-	l := logger.Get()
-	l.Info().Msgf("output %s of type MQTT registered. Publishing to topic %s", c.name, c.params.Topic)
-
-	go func() {
-		for {
-			select {
-			case event := <-events:
-				token := c.client.Publish(c.params.Topic, 1, false, event)
-				token.Wait()
-				if token.Error() != nil {
-					l.Error().Msgf("error publishing to topic: %s", c.params.Topic)
-				}
-			}
-		}
-	}()
-
-	return nil
-}
-
-func (c *MQTT) eventPubHandler(events chan<- map[string]any) mqtt.MessageHandler {
-	return func(client mqtt.Client, msg mqtt.Message) {
-		var data map[string]any
-		err := json.Unmarshal(msg.Payload(), &data)
-		if err != nil {
-			logger.Get().Error().Msgf("error decoding message: %s", err)
-			return
-		}
-
-		events <- data
-		logger.Get().Info().Msgf("Received message: %s from topic: %s", msg.Payload(), msg.Topic())
 	}
 }
 
@@ -134,16 +80,16 @@ var connectLostHandler mqtt.ConnectionLostHandler = func(client mqtt.Client, err
 	logger.Get().Warn().Msgf("Connection lost: %v", err)
 }
 
-func (c *MQTT) Disconnect() {
-	c.client.Disconnect(500)
-	close(c.connected)
+func (m *MQTT) Disconnect() {
+	m.client.Disconnect(500)
+	close(m.connected)
 }
 
-func (c *MQTT) Connect() error {
-	if c.client.IsConnected() {
+func (m *MQTT) Connect() error {
+	if m.client.IsConnected() {
 		return nil
 	}
-	token := c.client.Connect()
+	token := m.client.Connect()
 	token.Wait()
 	return token.Error()
 }
