@@ -51,21 +51,25 @@ type Notifier interface {
 }
 
 type collect struct {
-	notifier Notifier
-	data     []byte
-	err      error
+	relatedId string
+	notifier  Notifier
+	action    action
+	data      []byte
+	err       error
 }
 
 type Collect struct {
+	relatedId    string
 	workflowSlug string
-	collection   chan collect
+	collection   []collect
 	broadcast    chan<- event
 }
 
 func (c *Collector) NewCollect() Collect {
 	return Collect{
+		relatedId:    uuid.NewString(),
 		workflowSlug: c.workflow.Slug,
-		collection:   make(chan collect, len(c.workflow.Outputs)+1),
+		collection:   make([]collect, len(c.workflow.Outputs)+1),
 		broadcast:    c.queue,
 	}
 }
@@ -73,31 +77,30 @@ func (c *Collector) NewCollect() Collect {
 func (c Collect) Add(from Notifier, data []byte, err error, lvl ...zerolog.Level) {
 	logger.LogErr(err, lvl...)
 
-	c.collection <- collect{
-		notifier: from,
-		data:     data,
-		err:      err,
+	a := sent
+	if _, ok := from.(*workflow.Input); ok {
+		a = received
+	}
+
+	c.collection = append(c.collection, collect{
+		relatedId: c.relatedId,
+		notifier:  from,
+		action:    a,
+		data:      data,
+		err:       err,
+	})
+
+	if a == sent {
+		c.relatedId = uuid.NewString()
 	}
 }
 
 func (c Collect) Consume() {
-	close(c.collection)
-
-	// TODO: refactor this not proud of it
-	// this is a hack to get the same uuid for both sent and received events
-	// this is needed to link the sent and received events in the webui
-	id := uuid.NewString()
-	for col := range c.collection {
-		a := sent
-		if _, ok := col.notifier.(*workflow.Input); ok {
-			id = uuid.NewString()
-			a = received
-		}
-
+	for _, col := range c.collection {
 		e := event{
-			RelatedId:    id,
+			RelatedId:    col.relatedId,
 			WorkflowSlug: c.workflowSlug,
-			Action:       a,
+			Action:       col.action,
 			Notifier:     col.notifier.GetName(),
 			Provider:     col.notifier.GetProvider(),
 			Data:         string(col.data),
