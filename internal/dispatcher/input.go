@@ -9,10 +9,10 @@ import (
 )
 
 type subscriber interface {
-	Subscribe(dispatch func(from *workflow.Input, bytes []byte)) error
+	Subscribe(dispatch func(from *workflow.Input, data []byte)) error
 }
 
-func (d dispatcher) subscribeInputs() error {
+func (d dispatcher) registerInputs() error {
 	for _, input := range d.workflow.Inputs {
 		s, err := d.getSubscriber(input)
 		if err != nil {

@@ -28,7 +28,7 @@ func NewSubscriber(input *workflow.Input, server *server.Server) (*Subscriber, e
 	}, nil
 }
 
-func (i *Subscriber) Subscribe(dispatch func(from *workflow.Input, bytes []byte)) error {
+func (i *Subscriber) Subscribe(dispatch func(from *workflow.Input, data []byte)) error {
 	endpoint := server.Endpoint{
 		Method:  server.POST,
 		Path:    i.params.Endpoint,
@@ -44,15 +44,23 @@ func (i *Subscriber) Subscribe(dispatch func(from *workflow.Input, bytes []byte)
 	return nil
 }
 
-func (i *Subscriber) endpoint(dispatch func(from *workflow.Input, bytes []byte)) http.HandlerFunc {
+func (i *Subscriber) endpoint(dispatch func(from *workflow.Input, data []byte)) http.HandlerFunc {
+	type response struct {
+		Message string `json:"message"`
+	}
+
 	return func(w http.ResponseWriter, r *http.Request) {
 		bytes, err := io.ReadAll(r.Body)
 		if err != nil {
-			w.WriteHeader(http.StatusBadRequest)
+			i.server.Respond(w, r, http.StatusBadRequest, response{
+				Message: "error reading request body",
+			})
 			return
 		}
 
 		dispatch(i.Input, bytes)
-		w.WriteHeader(http.StatusOK)
+		i.server.Respond(w, r, http.StatusOK, response{
+			Message: "event dispatched",
+		})
 	}
 }

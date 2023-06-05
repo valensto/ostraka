@@ -34,7 +34,7 @@ func NewSubscriber(input *workflow.Input) (*Subscriber, error) {
 	return &s, nil
 }
 
-func (m *Subscriber) Subscribe(dispatch func(from *workflow.Input, bytes []byte)) error {
+func (m *Subscriber) Subscribe(dispatch func(from *workflow.Input, data []byte)) error {
 	token := m.client.Subscribe(m.MQTT.params.Topic, 1, m.eventPubHandler(dispatch))
 	token.Wait()
 
@@ -46,9 +46,9 @@ func (m *Subscriber) Subscribe(dispatch func(from *workflow.Input, bytes []byte)
 	return nil
 }
 
-func (m *Subscriber) eventPubHandler(dispatch func(from *workflow.Input, bytes []byte)) mqtt.MessageHandler {
+func (m *Subscriber) eventPubHandler(dispatch func(from *workflow.Input, data []byte)) mqtt.MessageHandler {
 	return func(client mqtt.Client, msg mqtt.Message) {
-		dispatch(m.Input, msg.Payload())
 		logger.Get().Info().Msgf("Received message: %s from topic: %s", msg.Payload(), msg.Topic())
+		dispatch(m.Input, msg.Payload())
 	}
 }

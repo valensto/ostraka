@@ -33,7 +33,7 @@ func BuildWorkflows(bs [][]byte) ([]*workflow.Workflow, error) {
 }
 
 func (sw workflowModel) toWorkflow() (*workflow.Workflow, error) {
-	event, err := sw.Event.toEvent()
+	event, err := sw.EventType.toEvent()
 	if err != nil {
 		return nil, err
 	}
@@ -70,7 +70,7 @@ func (sc conditionModel) toCondition() (*workflow.Condition, error) {
 	return workflow.NewCondition(sc.Field, sc.Operator, sc.Value, cs...)
 }
 
-func (se eventModel) toEvent() (*workflow.Event, error) {
+func (se eventTypeModel) toEvent() (*workflow.EventType, error) {
 	fields := make([]workflow.Field, len(se.Fields))
 	for i, sf := range se.Fields {
 		f, err := workflow.UnmarshallField(sf.Name, sf.DataType, sf.Required)
@@ -81,10 +81,10 @@ func (se eventModel) toEvent() (*workflow.Event, error) {
 		fields[i] = f
 	}
 
-	return workflow.UnmarshallEvent(se.Format, fields...)
+	return workflow.UnmarshallEventType(se.Format, fields...)
 }
 
-func (si inputModel) toInput(event *workflow.Event) (*workflow.Input, error) {
+func (si inputModel) toInput(event *workflow.EventType) (*workflow.Input, error) {
 	mappers := make([]workflow.Mapper, len(si.Decoder.Mappers))
 	for _, sm := range si.Decoder.Mappers {
 		mappers = append(mappers, workflow.Mapper{

@@ -26,8 +26,8 @@ export default function App() {
                         const updatedEvents = {
                             ...workflow.events,
                             [data.action]: [
+                                data,
                                 ...(workflow.events[data.action] || []),
-                                data
                             ]
                         };
                         return {

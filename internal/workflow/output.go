@@ -37,6 +37,14 @@ func UnmarshallOutput(name, destination string, condition *Condition, params any
 	return &o, nil
 }
 
+func (o *Output) GetName() string {
+	return o.Name
+}
+
+func (o *Output) GetProvider() string {
+	return o.Destination.String()
+}
+
 func WebUIOutput() *Output {
 	return &Output{
 		Name:        "webui",
@@ -45,10 +53,6 @@ func WebUIOutput() *Output {
 			Endpoint: "/webui/consume",
 		},
 	}
-}
-
-func (o *Output) FullName() string {
-	return fmt.Sprintf("[%s] %s", o.Destination, o.Name)
 }
 
 func (o *Output) unmarshallParams() error {

@@ -12,7 +12,7 @@ type Input struct {
 	params  any
 }
 
-func UnmarshallInput(name, source string, decoder Decoder, params any, event *Event) (*Input, error) {
+func UnmarshallInput(name, source string, decoder Decoder, params any, event *EventType) (*Input, error) {
 	src, err := getSource(source)
 	if err != nil {
 		return nil, err
@@ -33,11 +33,15 @@ func UnmarshallInput(name, source string, decoder Decoder, params any, event *Ev
 	return i, nil
 }
 
-func (i *Input) FullName() string {
-	return fmt.Sprintf("[%s] %s", i.Source, i.Name)
+func (i *Input) GetName() string {
+	return i.Name
 }
 
-func (i *Input) unmarshallParams(e *Event) error {
+func (i *Input) GetProvider() string {
+	return i.Source.String()
+}
+
+func (i *Input) unmarshallParams(e *EventType) error {
 	marshalled, err := json.Marshal(i.params)
 	if err != nil {
 		return fmt.Errorf("error marshalling input params: %w", err)

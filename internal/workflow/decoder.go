@@ -8,7 +8,7 @@ import (
 type Decoder struct {
 	format  Format
 	mappers []Mapper
-	event   *Event
+	event   *EventType
 }
 
 type Mapper struct {

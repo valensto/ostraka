@@ -3,10 +3,10 @@ package dispatcher
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/rs/zerolog"
 	"github.com/valensto/ostraka/internal/collector"
 	"github.com/valensto/ostraka/internal/config/env"
 	"github.com/valensto/ostraka/internal/consumer/webui"
-	"github.com/valensto/ostraka/internal/logger"
 	"github.com/valensto/ostraka/internal/server"
 	"github.com/valensto/ostraka/internal/workflow"
 )
@@ -30,10 +30,10 @@ func Dispatch(config *env.Config, workflows []*workflow.Workflow) error {
 			workflow:  wf,
 			server:    s,
 			outputs:   make(map[*workflow.Output]chan []byte, len(wf.Outputs)),
-			collector: collector.New(wf.Slug, consumer),
+			collector: collector.New(wf, consumer),
 		}
 
-		err := d.subscribeInputs()
+		err := d.registerInputs()
 		if err != nil {
 			return err
 		}
@@ -47,33 +47,31 @@ func Dispatch(config *env.Config, workflows []*workflow.Workflow) error {
 	return s.Run()
 }
 
-func (d dispatcher) dispatch(from *workflow.Input, data []byte) {
-	event, err := from.Decoder.Decode(data)
+func (d dispatcher) dispatch(input *workflow.Input, data []byte) {
+	collect := d.collector.NewCollect()
+	defer collect.Consume()
+
+	event, err := input.Decoder.Decode(data)
 	if err != nil {
-		err = fmt.Errorf("error decoding input %s: %s", from.Name, err)
-		d.collector.Collect(from, data, err)
-		logger.Get().Error().Msg(err.Error())
+		collect.Add(input, data, err)
 		return
 	}
 
 	marshalled, err := json.Marshal(event)
 	if err != nil {
-		err = fmt.Errorf("error marshaling event: %s", err)
-		d.collector.Collect(from, data, err)
-		logger.Get().Error().Msg(err.Error())
+		collect.Add(input, data, fmt.Errorf("error marshaling event: %s", err))
 		return
 	}
 
 	for output, c := range d.outputs {
 		if !output.Condition.Match(event) {
-			err = fmt.Errorf("event not matching output %s conditions", output.Name)
-			d.collector.Collect(from, data, err)
-			logger.Get().Info().Msg(err.Error())
+			collect.Add(input, data, fmt.Errorf("event does not match output %s condition", output.Name),
+				zerolog.InfoLevel)
 			continue
 		}
 
-		d.collector.Collect(from, data, nil)
-		d.collector.Collect(output, marshalled, nil)
+		collect.Add(input, data, nil)
+		collect.Add(output, marshalled, nil)
 		c <- marshalled
 	}
 }

@@ -2,7 +2,18 @@ package workflow
 
 import "fmt"
 
+type EventId string
+
+func (id EventId) String() string {
+	return string(id)
+}
+
 type Event struct {
+	Id   EventId
+	Data []byte
+}
+
+type EventType struct {
 	format string
 	fields []Field
 }
@@ -11,6 +22,21 @@ type Field struct {
 	name     string
 	dataType string
 	required bool
+}
+
+func UnmarshallEventType(format string, fields ...Field) (*EventType, error) {
+	if format == "" {
+		return nil, fmt.Errorf("event type is empty")
+	}
+
+	if len(fields) == 0 {
+		return nil, fmt.Errorf("event has no fields")
+	}
+
+	return &EventType{
+		format: format,
+		fields: fields,
+	}, nil
 }
 
 func UnmarshallField(name, dataType string, required bool) (Field, error) {
@@ -26,20 +52,5 @@ func UnmarshallField(name, dataType string, required bool) (Field, error) {
 		name:     name,
 		dataType: dataType,
 		required: required,
-	}, nil
-}
-
-func UnmarshallEvent(format string, fields ...Field) (*Event, error) {
-	if format == "" {
-		return nil, fmt.Errorf("event type is empty")
-	}
-
-	if len(fields) == 0 {
-		return nil, fmt.Errorf("event has no fields")
-	}
-
-	return &Event{
-		format: format,
-		fields: fields,
 	}, nil
 }

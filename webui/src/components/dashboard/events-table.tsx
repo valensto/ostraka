@@ -46,10 +46,14 @@ export const InputTable: FC<TableProps> = ({events, selectedRow, selectRow}) => 
                     {events.map((event, k) => (
                         <TableRow
                             key={k}
-                            onClick={() => selectRow(event.id)}
-                            className={selectedRow === event.id ? "bg-clip-border border-4 border-violet-300 border-solid" : ""
+                            onClick={() => selectRow(event.related_id)}
+                            className={selectedRow === event.related_id ? "bg-clip-border border-4 border-violet-300 border-solid" : ""
                         }>
-                            <TableCell className="font-medium">{event.notifier}</TableCell>
+                            <TableCell className="font-medium">
+                                {event.related_id}
+                                <br/>
+                                {event.notifier}
+                            </TableCell>
                             <TableCell>
                                 <pre>{JSON.stringify(JSON.parse(event.data), null, 2)}</pre>
                             </TableCell>
@@ -80,10 +84,14 @@ export const OutputTable: FC<TableProps> = ({events, selectedRow, selectRow}) =>
                     {events.map((event, k) => (
                         <TableRow
                             key={k}
-                            onClick={() => selectRow(event.id)}
-                            className={selectedRow === event.id ? "bg-clip-border border-4 border-violet-300 border-solid" : ""
+                            onClick={() => selectRow(event.related_id)}
+                            className={selectedRow === event.related_id ? "bg-clip-border border-4 border-violet-300 border-solid" : ""
                         }>
-                            <TableCell className="font-medium">{event.notifier}</TableCell>
+                            <TableCell className="font-medium">
+                                {event.related_id}
+                                <br/>
+                                {event.notifier}
+                            </TableCell>
                             <TableCell>
                                 <pre>
                                       {JSON.stringify(JSON.parse(event.data),null,2)}

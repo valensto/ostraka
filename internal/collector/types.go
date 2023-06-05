@@ -26,17 +26,18 @@ const (
 	sent     action = "sent"
 )
 
-type Event struct {
-	Id           string `json:"id"`
+type event struct {
+	RelatedId    string `json:"related_id"`
 	WorkflowSlug string `json:"workflow_slug"`
 	Action       action `json:"action"`
 	Notifier     string `json:"notifier"`
+	Provider     string `json:"provider"`
 	Data         string `json:"data"`
 	State        state  `json:"state"`
 	Message      string `json:"message"`
 }
 
-func (n Event) marshall() []byte {
+func (n event) marshall() []byte {
 	marshal, err := json.Marshal(n)
 	if err != nil {
 		logger.Get().Error().Msgf("error %s marshalling event: %+v", err.Error(), n)
