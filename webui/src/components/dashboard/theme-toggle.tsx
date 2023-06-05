@@ -1,0 +1,56 @@
+import { useState, useEffect } from "react";
+import { Moon, Sun } from "lucide-react";
+import { getThemeFromLocalStorage, setThemeToLocalStorage } from "@/utils/theme-utils";
+
+const ThemeToggle = () => {
+  const [isDarkMode, setIsDarkMode] = useState(getThemeFromLocalStorage());
+
+  useEffect(() => {
+    const systemTheme = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    const storedTheme = localStorage.getItem("theme");
+    const initialTheme = storedTheme !== null ? storedTheme === "dark" : systemTheme;
+    setIsDarkMode(initialTheme);
+    if (initialTheme) {
+      document.documentElement.classList.add("dark");
+    }
+  }, []);
+
+  useEffect(() => {
+    if (isDarkMode) {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+    }
+  }, [isDarkMode]);
+
+
+  const toggleTheme = () => {
+    const newTheme = !isDarkMode;
+    setIsDarkMode(newTheme);
+    setThemeToLocalStorage(newTheme);
+  };
+
+  return (
+    <div className="flex items-center">
+      <button
+        className={`relative w-12 h-6 bg-gray-300 dark:bg-gray-600 rounded-full p-1 transition-transform`}
+        onClick={toggleTheme}
+      >
+        <div
+          className={`absolute top-1 ${
+            isDarkMode ? 'right-5' : 'left-1'
+          } bg-white dark:bg-black w-4 h-4 rounded-full transition-transform ${
+            isDarkMode ? 'translate-x-full' : 'translate-x-0'
+          }`}
+        />
+        {isDarkMode ? (
+          <Moon size={16} color="white" />
+        ) : (
+          <Sun size={16} color="black" className="ml-auto" />
+        )}
+      </button>
+    </div>
+  );
+};
+
+export default ThemeToggle;
