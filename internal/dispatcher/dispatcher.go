@@ -48,30 +48,29 @@ func Dispatch(config *env.Config, workflows []*workflow.Workflow) error {
 }
 
 func (d dispatcher) dispatch(input *workflow.Input, data []byte) {
-	collect := d.collector.NewCollect()
-	defer collect.Consume()
+	collect := d.collector.Collect(input, data)
 
 	event, err := input.Decoder.Decode(data)
 	if err != nil {
-		collect.Add(input, data, err)
+		collect.WithError(fmt.Errorf("error decoding input: %w", err)).Send()
 		return
 	}
 
 	marshalled, err := json.Marshal(event)
 	if err != nil {
-		collect.Add(input, data, fmt.Errorf("error marshaling event: %s", err))
+		collect.WithError(fmt.Errorf("error marshalling event: %w", err)).Send()
 		return
 	}
 
 	for output, c := range d.outputs {
 		if !output.Condition.Match(event) {
-			collect.Add(input, data, fmt.Errorf("event does not match output %s condition", output.Name),
-				zerolog.InfoLevel)
+			collect.
+				WithError(fmt.Errorf("event does not match output %s condition", output.Name)).
+				WithLogLevel(zerolog.InfoLevel).Send()
 			continue
 		}
 
-		collect.Add(input, data, nil)
-		collect.Add(output, marshalled, nil)
+		collect.WithOutput(output, marshalled).Send()
 		c <- marshalled
 	}
 }

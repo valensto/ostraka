@@ -5,6 +5,7 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/valensto/ostraka/internal/logger"
 	"github.com/valensto/ostraka/internal/workflow"
+	"time"
 )
 
 type consumer interface {
@@ -45,74 +46,55 @@ func (c *Collector) broadcast() {
 	}()
 }
 
-type Notifier interface {
-	GetName() string
-	GetProvider() string
-}
-
-type collect struct {
-	relatedId string
-	notifier  Notifier
-	action    action
-	data      []byte
-	err       error
-}
-
 type Collect struct {
-	relatedId    string
-	workflowSlug string
-	collection   []collect
-	broadcast    chan<- event
+	event *event
+
+	queue    chan<- event
+	logLevel zerolog.Level
 }
 
-func (c *Collector) NewCollect() Collect {
-	return Collect{
-		relatedId:    uuid.NewString(),
-		workflowSlug: c.workflow.Slug,
-		collection:   make([]collect, len(c.workflow.Outputs)+1),
-		broadcast:    c.queue,
-	}
-}
+func (c *Collector) Collect(from *workflow.Input, data []byte) *Collect {
+	return &Collect{
+		event: &event{
+			WorkflowSlug: c.workflow.Slug,
+			From: source{
+				Provider: from.Source.String(),
+				Name:     from.Name,
+				Data:     string(data),
+			},
+			State:       succeed,
+			CollectedAt: time.Now().UTC(),
+			Message:     "event sent successfully",
+		},
 
-func (c Collect) Add(from Notifier, data []byte, err error, lvl ...zerolog.Level) {
-	logger.LogErr(err, lvl...)
-
-	a := sent
-	if _, ok := from.(*workflow.Input); ok {
-		a = received
-	}
-
-	c.collection = append(c.collection, collect{
-		relatedId: c.relatedId,
-		notifier:  from,
-		action:    a,
-		data:      data,
-		err:       err,
-	})
-
-	if a == sent {
-		c.relatedId = uuid.NewString()
+		logLevel: zerolog.InfoLevel,
+		queue:    c.queue,
 	}
 }
 
-func (c Collect) Consume() {
-	for _, col := range c.collection {
-		e := event{
-			RelatedId:    col.relatedId,
-			WorkflowSlug: c.workflowSlug,
-			Action:       col.action,
-			Notifier:     col.notifier.GetName(),
-			Provider:     col.notifier.GetProvider(),
-			Data:         string(col.data),
-			State:        succeed,
-			Message:      "event sent to output",
-		}
-
-		if col.err != nil {
-			e.State = failed
-			e.Message = col.err.Error()
-		}
-
-		c.broadcast <- e
+func (c *Collect) WithOutput(output *workflow.Output, data []byte) *Collect {
+	c.event.To = source{
+		Provider: output.Destination.String(),
+		Name:     output.Name,
+		Data:     string(data),
 	}
+	return c
+}
+
+func (c *Collect) WithError(err error) *Collect {
+	c.event.Message = err.Error()
+	c.event.State = failed
+	c.logLevel = zerolog.ErrorLevel
+	return c
+}
+
+func (c *Collect) WithLogLevel(lvl zerolog.Level) *Collect {
+	c.logLevel = lvl
+	return c
+}
+
+func (c *Collect) Send() {
+	c.event.Id = uuid.NewString()
+	logger.Get().WithLevel(c.logLevel).Msgf(c.event.Message)
+	c.queue <- *c.event
 }

@@ -33,14 +33,6 @@ func UnmarshallInput(name, source string, decoder Decoder, params any, event *Ev
 	return i, nil
 }
 
-func (i *Input) GetName() string {
-	return i.Name
-}
-
-func (i *Input) GetProvider() string {
-	return i.Source.String()
-}
-
 func (i *Input) unmarshallParams(e *EventType) error {
 	marshalled, err := json.Marshal(i.params)
 	if err != nil {

@@ -3,44 +3,38 @@ package collector
 import (
 	"encoding/json"
 	"github.com/valensto/ostraka/internal/logger"
+	"time"
 )
 
 type (
-	state  string
-	action string
+	state string
 )
-
-func (s state) String() string {
-	return string(s)
-}
-
-func (a action) String() string {
-	return string(a)
-}
 
 const (
 	succeed state = "succeed"
 	failed  state = "failed"
-
-	received action = "received"
-	sent     action = "sent"
 )
 
 type event struct {
-	RelatedId    string `json:"related_id"`
-	WorkflowSlug string `json:"workflow_slug"`
-	Action       action `json:"action"`
-	Notifier     string `json:"notifier"`
-	Provider     string `json:"provider"`
-	Data         string `json:"data"`
-	State        state  `json:"state"`
-	Message      string `json:"message"`
+	Id           string    `json:"id"`
+	WorkflowSlug string    `json:"workflow_slug"`
+	From         source    `json:"from"`
+	To           source    `json:"to"`
+	State        state     `json:"state"`
+	Message      string    `json:"message"`
+	CollectedAt  time.Time `json:"collected_at"`
 }
 
-func (n event) marshall() []byte {
-	marshal, err := json.Marshal(n)
+type source struct {
+	Provider string `json:"provider"`
+	Name     string `json:"name"`
+	Data     string `json:"data"`
+}
+
+func (e *event) marshall() []byte {
+	marshal, err := json.Marshal(e)
 	if err != nil {
-		logger.Get().Error().Msgf("error %s marshalling event: %+v", err.Error(), n)
+		logger.Get().Error().Msgf("error %s marshalling event: %+v", err.Error(), e)
 		return nil
 	}
 

@@ -15,16 +15,14 @@ interface MetricsProps {
 interface counter {
     Inputs: number
     Outputs: number
-    InputsEvents: number
-    OutputsEvents: number
+    NbEvents: number
 }
 
 export const Metrics: FC<MetricsProps> = ({workflows}) => {
     const [counter, setCounter] = useState<counter>({
         Inputs: 0,
         Outputs: 0,
-        InputsEvents: 0,
-        OutputsEvents: 0
+        NbEvents: 0
     })
 
     useEffect(() => {

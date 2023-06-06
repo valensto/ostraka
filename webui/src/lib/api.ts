@@ -8,10 +8,7 @@ export const getWorkflows = async (): Promise<Workflow[]> => {
 
     return workflows.map((workflow: Workflow) => ({
         ...workflow,
-        events: {
-            received: [] as Event[],
-            sent: [] as Event[],
-        }
+        events: []
     }));
 }
 
