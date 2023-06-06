@@ -2,12 +2,13 @@ package local
 
 import (
 	"fmt"
-	"github.com/valensto/ostraka/internal/config/static"
-	"github.com/valensto/ostraka/internal/logger"
-	"github.com/valensto/ostraka/internal/workflow"
 	"io"
 	"os"
 	"path/filepath"
+
+	"github.com/valensto/ostraka/internal/config/static"
+	"github.com/valensto/ostraka/internal/logger"
+	"github.com/valensto/ostraka/internal/workflow"
 )
 
 func Extract(source string) ([]*workflow.Workflow, error) {
@@ -16,7 +17,7 @@ func Extract(source string) ([]*workflow.Workflow, error) {
 		return nil, fmt.Errorf("error reading resources directory: %w", err)
 	}
 
-	var workflows [][]byte
+	workflows := make(map[string][]byte)
 	for _, file := range dir {
 		ext := filepath.Ext(file.Name())
 		if ext != ".yaml" && ext != ".yml" {
@@ -28,7 +29,8 @@ func Extract(source string) ([]*workflow.Workflow, error) {
 		if err != nil {
 			return nil, fmt.Errorf("error extracting workflow: %w", err)
 		}
-		workflows = append(workflows, wf)
+
+		workflows[file.Name()] = wf
 	}
 
 	return static.BuildWorkflows(workflows)

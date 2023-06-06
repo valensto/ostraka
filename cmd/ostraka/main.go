@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+
 	"github.com/valensto/ostraka/internal/config/env"
 	"github.com/valensto/ostraka/internal/config/static/local"
 	"github.com/valensto/ostraka/internal/dispatcher"
@@ -17,12 +19,12 @@ func main() {
 func run() error {
 	config, err := env.Load()
 	if err != nil {
-		return err
+		return fmt.Errorf("cannot load env config: %w", err)
 	}
 
 	workflows, err := local.Extract(".ostraka/workflows")
 	if err != nil {
-		return err
+		return fmt.Errorf("cannot extract workflows: %w", err)
 	}
 
 	return dispatcher.Dispatch(config, workflows)

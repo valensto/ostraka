@@ -2,28 +2,30 @@ package static
 
 import (
 	"fmt"
+
 	"github.com/go-playground/validator/v10"
-	"github.com/valensto/ostraka/internal/workflow"
 	"gopkg.in/yaml.v3"
+
+	"github.com/valensto/ostraka/internal/workflow"
 )
 
-func BuildWorkflows(bs [][]byte) ([]*workflow.Workflow, error) {
+func BuildWorkflows(contentFile ContentFile) ([]*workflow.Workflow, error) {
 	var wfs []*workflow.Workflow
-	for _, b := range bs {
+	for fname, content := range contentFile {
 		var sw workflowModel
-		err := yaml.Unmarshal(b, &sw)
+		err := yaml.Unmarshal(content, &sw)
 		if err != nil {
-			return nil, fmt.Errorf("error parsing YAML wf: %w", err)
+			return nil, fmt.Errorf("error parsing YAML wf: %w in file %s", err, fname)
 		}
 
 		err = validator.New().Struct(sw)
 		if err != nil {
-			return nil, fmt.Errorf("error validating wf: %w", err)
+			return nil, fmt.Errorf("error: validating wf: %w in file %s", err, fname)
 		}
 
 		wf, err := sw.toWorkflow()
 		if err != nil {
-			return nil, fmt.Errorf("error converting workflowModel to workflow: %w", err)
+			return nil, fmt.Errorf("error converting workflowModel to workflow: %w in file %s", err, fname)
 		}
 
 		wfs = append(wfs, wf)
