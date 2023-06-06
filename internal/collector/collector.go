@@ -38,8 +38,9 @@ func (c *Collector) broadcast() {
 		for {
 			select {
 			case event := <-c.queue:
+				data := event.marshall()
 				for _, consumer := range c.consumers {
-					consumer.Consume(event.marshall())
+					consumer.Consume(data)
 				}
 			}
 		}
