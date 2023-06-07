@@ -16,8 +16,12 @@ RUN go install github.com/cespare/reflex@latest
 RUN rm -rf /ostraka/webui/dist/
 COPY --from=webui /src/webui/dist/ /ostraka/webui/dist/
 
-COPY *.go /ostraka/
 COPY scripts/run.sh /
 COPY scripts/test.sh /
 
+WORKDIR /ostraka
+COPY go.* /
+RUN go mod download
+
+EXPOSE 4000
 ENTRYPOINT reflex -r "(\.go$|go\.mod)" -s sh /run.sh

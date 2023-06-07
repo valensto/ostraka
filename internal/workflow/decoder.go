@@ -8,7 +8,7 @@ import (
 type Decoder struct {
 	format  Format
 	mappers []Mapper
-	event   *Event
+	event   *EventType
 }
 
 type Mapper struct {
@@ -29,17 +29,17 @@ func UnmarshallDecoder(format string, mappers []Mapper) (*Decoder, error) {
 }
 
 func (d Decoder) Decode(data []byte) (map[string]any, error) {
-	if d.format != "json" {
+	if d.format != JSON {
 		return nil, fmt.Errorf("unknown decoder type: %s", d.format)
 	}
 
 	var source map[string]any
 	err := json.Unmarshal(data, &source)
 	if err != nil {
-		return nil, fmt.Errorf("error decoding message: %w", err)
+		return nil, fmt.Errorf("error decoding event: %w", err)
 	}
 
-	var decoded = map[string]any{}
+	var decoded = make(map[string]any, len(d.event.fields))
 	for _, field := range d.event.fields {
 		sf, ok := d.getSourceFieldByTarget(field.name)
 		if !ok && field.required {

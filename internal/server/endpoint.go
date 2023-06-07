@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/cors"
-	"html/template"
 	"net/http"
 )
 
@@ -75,17 +74,4 @@ func (s *Server) AddSubRouter(endpoint Endpoint) error {
 	subRouter.MethodFunc(endpoint.Method.String(), "/", handler)
 	s.Router.Mount(endpoint.Path, subRouter)
 	return nil
-}
-
-func (s *Server) webui() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		tmpl := template.Must(template.ParseFiles("webui/dist/index.html"))
-		err := tmpl.Execute(w, nil)
-		if err != nil {
-			s.Respond(w, r, http.StatusInternalServerError, nil)
-			return
-		}
-
-		s.Respond(w, r, http.StatusOK, nil)
-	}
 }

@@ -62,26 +62,30 @@ Ostraka uses YAML files for configuration. You can define the inputs and outputs
 Example YAML configuration:
 
 ```yaml
-event:
-  type: json
+name: incoming-orders
+
+event_type:
+  format: json
   fields:
     - name: customerId
-      type: string
+      data_type: string
       required: true
     - name: orderNumber
-      type: int
+      data_type: int
       required: true
     - name: orderStatus
-      type: string
+      data_type: string
       required: true
     - name: nonRequiredField
-      type: string
-      
+      data_type: string
+
 inputs:
   - name: webhook-orders
-    type: webhook
+    source: webhook
+    params:
+      endpoint: /webhook/orders
     decoder:
-      type: json
+      format: json
       mappers:
         - source: o_customer_id
           target: customerId
@@ -89,50 +93,29 @@ inputs:
           target: orderNumber
         - source: o_status
           target: orderStatus
-    params:
-      endpoint: /webhook/orders
 
-  - name: mqtt-orders
-    type: mqtt
-    decoder:
-      type: json
-      mappers:
-        - source: customer_id
-          target: customerId
-        - source: number
-          target: orderNumber
-        - source: status
-          target: orderStatus
-    params:
-      broker: mqtt.example.com
-      user: my-user
-      password: my-password
-      topic: my-topic
-      
 outputs:
-  - name: sse-orders
-    type: sse
+  - name: sse-orders-completed
+    destination: sse
     params:
-      endpoint: /sse/orders
-      auth:
-        type: jwt
-        secret: my-secret-key
-        encoder:
-          type: json
-          fields:
-            - name: customer_id
-              type: string
-            - name: customer_email
-              type: string
+      endpoint: /sse/orders/completed
+    condition:
+      operator: or
       conditions:
-          operator: and
-          conditions:
-            - field: customerId
-              operator: eq
-              value: "customer_id"
-            - field: orderStatus
-              operator: eq
-              value: "completed"
+        - field: orderStatus
+          operator: eq
+          value: "completed"
+        - field: orderStatus
+          operator: eq
+          value: "pending"
+  - name: sse-orders-failed
+    destination: sse
+    params:
+      endpoint: /sse/orders/failed
+    condition:
+      field: orderStatus
+      operator: eq
+      value: "failed"
 ```
 
 Modify the configuration file to match your specific inputs, outputs, and other settings.

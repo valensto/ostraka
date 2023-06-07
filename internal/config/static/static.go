@@ -2,28 +2,30 @@ package static
 
 import (
 	"fmt"
+
 	"github.com/go-playground/validator/v10"
-	"github.com/valensto/ostraka/internal/workflow"
 	"gopkg.in/yaml.v3"
+
+	"github.com/valensto/ostraka/internal/workflow"
 )
 
-func BuildWorkflows(bs [][]byte) ([]*workflow.Workflow, error) {
+func BuildWorkflows(contentFile ContentFile) ([]*workflow.Workflow, error) {
 	var wfs []*workflow.Workflow
-	for _, b := range bs {
+	for fname, content := range contentFile {
 		var sw workflowModel
-		err := yaml.Unmarshal(b, &sw)
+		err := yaml.Unmarshal(content, &sw)
 		if err != nil {
-			return nil, fmt.Errorf("error parsing YAML wf: %w", err)
+			return nil, fmt.Errorf("error parsing YAML wf: %w in file %s", err, fname)
 		}
 
 		err = validator.New().Struct(sw)
 		if err != nil {
-			return nil, fmt.Errorf("error validating wf: %w", err)
+			return nil, fmt.Errorf("error: validating wf: %w in file %s", err, fname)
 		}
 
 		wf, err := sw.toWorkflow()
 		if err != nil {
-			return nil, fmt.Errorf("error converting workflowModel to workflow: %w", err)
+			return nil, fmt.Errorf("error converting workflowModel to workflow: %w in file %s", err, fname)
 		}
 
 		wfs = append(wfs, wf)
@@ -33,7 +35,7 @@ func BuildWorkflows(bs [][]byte) ([]*workflow.Workflow, error) {
 }
 
 func (sw workflowModel) toWorkflow() (*workflow.Workflow, error) {
-	event, err := sw.Event.toEvent()
+	event, err := sw.EventType.toEvent()
 	if err != nil {
 		return nil, err
 	}
@@ -70,21 +72,21 @@ func (sc conditionModel) toCondition() (*workflow.Condition, error) {
 	return workflow.NewCondition(sc.Field, sc.Operator, sc.Value, cs...)
 }
 
-func (se eventModel) toEvent() (*workflow.Event, error) {
+func (se eventTypeModel) toEvent() (*workflow.EventType, error) {
 	fields := make([]workflow.Field, len(se.Fields))
-	for _, sf := range se.Fields {
+	for i, sf := range se.Fields {
 		f, err := workflow.UnmarshallField(sf.Name, sf.DataType, sf.Required)
 		if err != nil {
 			return nil, err
 		}
 
-		fields = append(fields, f)
+		fields[i] = f
 	}
 
-	return workflow.UnmarshallEvent(se.Format, fields...)
+	return workflow.UnmarshallEventType(se.Format, fields...)
 }
 
-func (si inputModel) toInput(event *workflow.Event) (*workflow.Input, error) {
+func (si inputModel) toInput(event *workflow.EventType) (*workflow.Input, error) {
 	mappers := make([]workflow.Mapper, len(si.Decoder.Mappers))
 	for _, sm := range si.Decoder.Mappers {
 		mappers = append(mappers, workflow.Mapper{

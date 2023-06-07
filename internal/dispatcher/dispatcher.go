@@ -1,52 +1,39 @@
 package dispatcher
 
 import (
-	"context"
 	"encoding/json"
-	"github.com/valensto/ostraka/internal/logger"
+	"fmt"
+	"github.com/rs/zerolog"
+	"github.com/valensto/ostraka/internal/collector"
+	"github.com/valensto/ostraka/internal/config/env"
+	"github.com/valensto/ostraka/internal/consumer/webui"
 	"github.com/valensto/ostraka/internal/server"
 	"github.com/valensto/ostraka/internal/workflow"
 )
 
-type extractor interface {
-	Extract(_ context.Context) ([]*workflow.Workflow, error)
-}
-
 type dispatcher struct {
-	workflow     *workflow.Workflow
-	server       *server.Server
-	inputEvents  chan map[string]any
-	outputEvents map[string]chan []byte
-	globalEvents chan []globalEvent
+	workflow  *workflow.Workflow
+	server    *server.Server
+	outputs   map[*workflow.Output]chan []byte
+	collector *collector.Collector
 }
 
-type globalEvent struct {
-	WorkflowName string `json:"workflow_name"`
-	SourceType   string `json:"source_type"`
-	SourceName   string `json:"source_name"`
-	Payload      any    `json:"payload"`
-	State        string `json:"state"`
-}
-
-func Dispatch(ctx context.Context, extractor extractor, port string) error {
-	s := server.New(port)
-
-	workflows, err := extractor.Extract(ctx)
+func Dispatch(config *env.Config, workflows []*workflow.Workflow) error {
+	s := server.New(config)
+	consumer, err := webui.New(config.Webui, s, workflows)
 	if err != nil {
 		return err
 	}
 
 	for _, wf := range workflows {
 		d := &dispatcher{
-			workflow:     wf,
-			server:       s,
-			inputEvents:  make(chan map[string]any, len(wf.Inputs)),
-			outputEvents: make(map[string]chan []byte),
+			workflow:  wf,
+			server:    s,
+			outputs:   make(map[*workflow.Output]chan []byte, len(wf.Outputs)),
+			collector: collector.New(wf, consumer),
 		}
 
-		go d.dispatchEvents()
-
-		err := d.subscribeInputs()
+		err := d.registerInputs()
 		if err != nil {
 			return err
 		}
@@ -57,35 +44,33 @@ func Dispatch(ctx context.Context, extractor extractor, port string) error {
 		}
 	}
 
-	return s.Serve()
+	return s.Run()
 }
 
-func (d dispatcher) dispatchEvents() {
-	log := logger.Get()
-	for {
-		select {
-		case event := <-d.inputEvents:
-			data, err := json.Marshal(event)
-			if err != nil {
-				log.Warn().Msgf("error marshaling event: %s", err.Error())
-				continue
-			}
+func (d dispatcher) dispatch(input *workflow.Input, data []byte) {
+	collect := d.collector.Collect(input, data)
 
-			for outputName, c := range d.outputEvents {
-				output, ok := d.workflow.Outputs[outputName]
-				if !ok {
-					log.Warn().Msgf("output %s not found", outputName)
-					continue
-				}
+	event, err := input.Decoder.Decode(data)
+	if err != nil {
+		collect.WithError(fmt.Errorf("error decoding input: %w", err)).Send()
+		return
+	}
 
-				match := output.Condition.Match(event)
-				if !match {
-					continue
-				}
+	marshalled, err := json.Marshal(event)
+	if err != nil {
+		collect.WithError(fmt.Errorf("error marshalling event: %w", err)).Send()
+		return
+	}
 
-				log.Info().Msgf("event dispatched: %s to %s", data, outputName)
-				c <- data
-			}
+	for output, c := range d.outputs {
+		if !output.Condition.Match(event) {
+			collect.
+				WithError(fmt.Errorf("event does not match output %s condition", output.Name)).
+				WithLogLevel(zerolog.InfoLevel).Send()
+			continue
 		}
+
+		collect.WithOutput(output, marshalled).Send()
+		c <- marshalled
 	}
 }

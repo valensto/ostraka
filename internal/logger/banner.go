@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-func Banner(port string) {
+func Banner() {
 	b := `
  ██████╗ ███████╗████████╗██████╗  █████╗ ██╗  ██╗ █████╗ 
 ██╔═══██╗██╔════╝╚══██╔══╝██╔══██╗██╔══██╗██║ ██╔╝██╔══██╗
@@ -14,13 +14,12 @@ func Banner(port string) {
 ██║   ██║╚════██║   ██║   ██╔══██╗██╔══██║██╔═██╗ ██╔══██║
 ╚██████╔╝███████║   ██║   ██║  ██║██║  ██║██║  ██╗██║  ██║
  ╚═════╝ ╚══════╝   ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝
-https://github.com/valensto/ostraka - %v ©
-HTTP server running on port - %v
+https://github.com/valensto/ostraka - %v
 `
 	t := time.Now()
 	y := t.Year()
 	c := exec.Command("clear")
 	c.Stdout = os.Stdout
 	_ = c.Run()
-	Get().Info().Msgf(b, y, port)
+	Get().Info().Msgf(b, y)
 }

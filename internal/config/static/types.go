@@ -1,13 +1,16 @@
 package static
 
+// ContentFile is a map of file name and content.
+type ContentFile map[string][]byte
+
 type workflowModel struct {
-	Name    string        `yaml:"name"   validate:"required"`
-	Event   eventModel    `yaml:"event"   validate:"required,dive,required"`
-	Inputs  []inputModel  `yaml:"inputs"   validate:"required,dive,required"`
-	Outputs []outputModel `yaml:"outputs"   validate:"required,dive,required"`
+	Name      string         `yaml:"name"   validate:"required"`
+	EventType eventTypeModel `yaml:"event_type"   validate:"required,dive,required"`
+	Inputs    []inputModel   `yaml:"inputs"   validate:"required,dive,required"`
+	Outputs   []outputModel  `yaml:"outputs"   validate:"required,dive,required"`
 }
 
-type eventModel struct {
+type eventTypeModel struct {
 	Format string       `yaml:"format"   validate:"required"`
 	Fields []fieldModel `yaml:"fields"   validate:"required,dive,required"`
 }
