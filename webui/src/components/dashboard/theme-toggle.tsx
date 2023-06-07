@@ -3,7 +3,7 @@ import { Moon, Sun } from "lucide-react";
 import { getThemeFromLocalStorage, setThemeToLocalStorage } from "@/utils/theme-utils";
 
 const ThemeToggle = () => {
-  const [isDarkMode, setIsDarkMode] = useState(getThemeFromLocalStorage());
+  const [isDarkMode, setIsDarkMode] = useState(getThemeFromLocalStorage() === "dark");
 
   useEffect(() => {
     const systemTheme = window.matchMedia("(prefers-color-scheme: dark)").matches;
@@ -25,9 +25,8 @@ const ThemeToggle = () => {
 
 
   const toggleTheme = useCallback(() => {
-    const newTheme = !isDarkMode;
-    setIsDarkMode(newTheme);
-    setThemeToLocalStorage(newTheme);
+    setThemeToLocalStorage(isDarkMode ? "dark" : "light");
+    setIsDarkMode(prevState => !prevState);
   }, [isDarkMode]);
 
   return (
