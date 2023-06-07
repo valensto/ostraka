@@ -56,7 +56,7 @@ func (d dispatcher) dispatch(input *workflow.Input, data []byte) {
 		return
 	}
 
-	marshalled, err := json.Marshal(event)
+	b, err := json.Marshal(event)
 	if err != nil {
 		collect.WithError(fmt.Errorf("error marshalling event: %w", err)).Send()
 		return
@@ -70,7 +70,7 @@ func (d dispatcher) dispatch(input *workflow.Input, data []byte) {
 			continue
 		}
 
-		collect.WithOutput(output, marshalled).Send()
-		c <- marshalled
+		collect.WithOutput(output, b).Send()
+		c <- b
 	}
 }
