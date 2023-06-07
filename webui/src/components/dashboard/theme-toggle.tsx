@@ -32,7 +32,7 @@ const ThemeToggle = () => {
   return (
     <div className="flex items-center">
       <button
-        className={`relative w-12 h-6 bg-gray-300 dark:bg-gray-600 rounded-full p-1 transition-transform`}
+        className={`relative w-12 h-6 bg-primary rounded-full p-1 transition-transform`}
         onClick={toggleTheme}
       >
         <div
@@ -43,9 +43,9 @@ const ThemeToggle = () => {
           }`}
         />
         {isDarkMode ? (
-          <Moon size={16} color="white" />
+          <Moon size={16} color="black" />
         ) : (
-          <Sun size={16} color="black" className="ml-auto" />
+          <Sun size={16} color="white" className="ml-auto" />
         )}
       </button>
     </div>
