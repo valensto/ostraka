@@ -23,30 +23,20 @@ const ThemeToggle = () => {
     }
   }, [isDarkMode]);
 
-
   const toggleTheme = useCallback(() => {
     setThemeToLocalStorage(isDarkMode ? "dark" : "light");
-    setIsDarkMode(prevState => !prevState);
+    setIsDarkMode((prevState) => !prevState);
   }, [isDarkMode]);
 
   return (
     <div className="flex items-center">
-      <button
-        className={`relative w-12 h-6 bg-primary rounded-full p-1 transition-transform`}
-        onClick={toggleTheme}
-      >
+      <button className={`relative w-12 h-6 bg-secondary rounded-full p-1 transition-transform flex items-center`} onClick={toggleTheme}>
         <div
-          className={`absolute top-1 ${
-            isDarkMode ? 'right-5' : 'left-1'
-          } bg-white dark:bg-black w-4 h-4 rounded-full transition-transform ${
-            isDarkMode ? 'translate-x-full' : 'translate-x-0'
+          className={`absolute ${isDarkMode ? "right-0" : "left-0"} bg-white dark:bg-black w-5 h-5 rounded-full transition-transform ${
+            isDarkMode ? "-translate-x-0.5" : "translate-x-0.5"
           }`}
         />
-        {isDarkMode ? (
-          <Moon size={16} color="black" />
-        ) : (
-          <Sun size={16} color="white" className="ml-auto" />
-        )}
+        {isDarkMode ? <Moon size={16} color="white" /> : <Sun size={16} color="black" className="ml-auto" />}
       </button>
     </div>
   );
