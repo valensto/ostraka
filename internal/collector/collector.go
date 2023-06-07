@@ -9,20 +9,20 @@ import (
 )
 
 type consumer interface {
-	Consume(bytes []byte)
+	Consume(event Event)
 }
 
 type Collector struct {
 	workflow  *workflow.Workflow
 	consumers []consumer
-	queue     chan event
+	queue     chan Event
 }
 
 func New(wf *workflow.Workflow, consumers ...consumer) *Collector {
 	c := &Collector{
 		workflow:  wf,
 		consumers: consumers,
-		queue:     make(chan event),
+		queue:     make(chan Event),
 	}
 
 	c.broadcast()
@@ -38,9 +38,8 @@ func (c *Collector) broadcast() {
 		for {
 			select {
 			case event := <-c.queue:
-				data := event.marshall()
 				for _, consumer := range c.consumers {
-					consumer.Consume(data)
+					consumer.Consume(event)
 				}
 			}
 		}
@@ -48,15 +47,15 @@ func (c *Collector) broadcast() {
 }
 
 type Collect struct {
-	event *event
+	event *Event
 
-	queue    chan<- event
+	queue    chan<- Event
 	logLevel zerolog.Level
 }
 
 func (c *Collector) Collect(from *workflow.Input, data []byte) *Collect {
 	return &Collect{
-		event: &event{
+		event: &Event{
 			WorkflowSlug: c.workflow.Slug,
 			From: source{
 				Provider: from.Source.String(),
