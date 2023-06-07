@@ -2,6 +2,7 @@ package webui
 
 import (
 	"fmt"
+	"github.com/valensto/ostraka/internal/collector"
 	"github.com/valensto/ostraka/internal/config/env"
 	"github.com/valensto/ostraka/internal/logger"
 	"github.com/valensto/ostraka/internal/provider/sse"
@@ -40,8 +41,8 @@ func New(config env.Webui, server *server.Server, workflows []*workflow.Workflow
 	return webui, p.Publish(webui.events)
 }
 
-func (webui *Webui) Consume(bytes []byte) {
-	webui.events <- bytes
+func (webui *Webui) Consume(event collector.Event) {
+	webui.events <- event.Marshall()
 }
 
 func (webui *Webui) basicAuth(handler http.Handler) http.HandlerFunc {

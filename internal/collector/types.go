@@ -15,7 +15,7 @@ const (
 	failed  state = "failed"
 )
 
-type event struct {
+type Event struct {
 	Id           string    `json:"id"`
 	WorkflowSlug string    `json:"workflow_slug"`
 	From         source    `json:"from"`
@@ -31,7 +31,7 @@ type source struct {
 	Data     string `json:"data"`
 }
 
-func (e *event) marshall() []byte {
+func (e *Event) Marshall() []byte {
 	marshal, err := json.Marshal(e)
 	if err != nil {
 		logger.Get().Error().Msgf("error %s marshalling event: %+v", err.Error(), e)
