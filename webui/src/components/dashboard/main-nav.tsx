@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import ThemeToggle from "./theme-toggle";
 
 export function MainNav({
   className,
@@ -14,6 +15,9 @@ export function MainNav({
         >
           Documentation
         </a>
+      </div>
+      <div className="inline-block ml-4">
+          <ThemeToggle  />
       </div>
     </nav>
   );
