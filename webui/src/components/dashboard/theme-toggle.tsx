@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Moon, Sun } from "lucide-react";
 import { getThemeFromLocalStorage, setThemeToLocalStorage } from "@/utils/theme-utils";
 
@@ -24,11 +24,11 @@ const ThemeToggle = () => {
   }, [isDarkMode]);
 
 
-  const toggleTheme = () => {
+  const toggleTheme = useCallback(() => {
     const newTheme = !isDarkMode;
     setIsDarkMode(newTheme);
     setThemeToLocalStorage(newTheme);
-  };
+  }, [isDarkMode]);
 
   return (
     <div className="flex items-center">
