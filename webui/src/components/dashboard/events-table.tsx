@@ -11,11 +11,13 @@ import {ScrollArea} from "@/components/ui/scroll-area";
 import {FC} from "react";
 import {Event} from "@/types";
 import {ArrowRightFromLine, CircleSlash, Info} from "lucide-react";
+import { Badge } from "@/components/ui/badge"
+import dayjs from "dayjs";
+import relativeTime from "dayjs/plugin/relativeTime";
+dayjs.extend(relativeTime)
 
 interface TableProps {
     events: Event[]
-    selectedRow?: string
-    selectRow: (row: string) => void
 }
 
 const statusIcon = (status: string) => {
@@ -29,73 +31,49 @@ const statusIcon = (status: string) => {
     }
 }
 
-export const InputTable: FC<TableProps> = ({events, selectedRow, selectRow}) => {
+export const EventsTable: FC<TableProps> = ({events}) => {
     return (
-        <ScrollArea className="h-[700px] rounded-md border">
+        <ScrollArea className="rounded-md border">
             <Table>
-                <TableCaption>A list of your session inputs events.</TableCaption>
+                <TableCaption>A list of your session events</TableCaption>
                 <TableHeader>
                     <TableRow>
-                        <TableHead className="w-[150px]">From</TableHead>
-                        <TableHead>Event</TableHead>
-                        <TableHead>Message</TableHead>
-                        <TableHead className="text-right">Status</TableHead>
+                        <TableHead className="w-[200px]">From</TableHead>
+                        <TableHead className={"w-[400px]"}>Data</TableHead>
+                        <TableHead className="text-center w-[80px]">Status</TableHead>
+                        <TableHead className="text-right w-[400px]">Data</TableHead>
+                        <TableHead className={"text-right w-[200px]"}>To</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
-                    {events.map((event, k) => (
-                        <TableRow
-                            key={k}
-                            onClick={() => selectRow(event.related_id)}
-                            className={selectedRow === event.related_id ? "bg-clip-border border-4 border-violet-300 border-solid" : ""
-                        }>
+                    {events.map((event) => (
+                        <TableRow key={event.id}>
                             <TableCell className="font-medium">
-                                {event.related_id}
+                                <Badge className={"mb-2"} variant="secondary">{event.from.provider}</Badge>
+                                 <br/>
+                                {event.from.name}
                                 <br/>
-                                {event.notifier}
+                                <Badge className={"mt-2"} variant="secondary">{dayjs(event.collected_at).fromNow()}</Badge>
                             </TableCell>
                             <TableCell>
-                                <pre>{JSON.stringify(JSON.parse(event.data), null, 2)}</pre>
+                                <pre>{JSON.stringify(JSON.parse(event.from.data), null, 2)}</pre>
                             </TableCell>
-                            <TableCell>{event.message}</TableCell>
-                            <TableCell className="text-right">
-                                {statusIcon(event.state)}
+                            <TableCell className="text-center border">
+                                {statusIcon(event.state)} <br/>
                             </TableCell>
-                        </TableRow>
-                    ))}
-                </TableBody>
-            </Table>
-        </ScrollArea>
-    );
-}
-
-export const OutputTable: FC<TableProps> = ({events, selectedRow, selectRow}) => {
-    return (
-        <ScrollArea className="h-[700px] rounded-md border">
-            <Table>
-                <TableCaption>A list of your session outputs events.</TableCaption>
-                <TableHeader>
-                    <TableRow>
-                        <TableHead>To</TableHead>
-                        <TableHead>Payload</TableHead>
-                    </TableRow>
-                </TableHeader>
-                <TableBody>
-                    {events.map((event, k) => (
-                        <TableRow
-                            key={k}
-                            onClick={() => selectRow(event.related_id)}
-                            className={selectedRow === event.related_id ? "bg-clip-border border-4 border-violet-300 border-solid" : ""
-                        }>
-                            <TableCell className="font-medium">
-                                {event.related_id}
+                            <TableCell >
+                                <div className={"flex justify-end h-100"}>
+                                    {
+                                        event.state === "failed" ?
+                                            <p className={"text-right"}>{event.message}</p>:
+                                            <pre>{JSON.stringify(JSON.parse(event.to.data), null, 2)}</pre>
+                                    }
+                                </div>
+                            </TableCell>
+                            <TableCell className="font-medium text-right">
+                                <Badge className={"mb-2"} variant="secondary">{event.to.provider}</Badge>
                                 <br/>
-                                {event.notifier}
-                            </TableCell>
-                            <TableCell>
-                                <pre>
-                                      {JSON.stringify(JSON.parse(event.data),null,2)}
-                                </pre>
+                                {event.to.name}
                             </TableCell>
                         </TableRow>
                     ))}

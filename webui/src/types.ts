@@ -3,20 +3,21 @@ export interface Workflow {
     slug: string;
     nb_inputs: number;
     nb_outputs: number;
-    events: Events;
+    events: Event[];
 }
 
 export interface Event {
-    related_id: string;
+    id: string;
     workflow_slug: string;
-    action: "received" | "sent";
-    notifier: string;
-    data: string;
+    from: Source;
+    to: Source;
     state: "succeed" | "failed";
     message: string;
+    collected_at: string;
 }
 
-export interface Events {
-    received: Event[];
-    sent: Event[];
+interface Source {
+    provider: string;
+    name: string;
+    data: string;
 }

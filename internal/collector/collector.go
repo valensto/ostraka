@@ -5,6 +5,7 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/valensto/ostraka/internal/logger"
 	"github.com/valensto/ostraka/internal/workflow"
+	"time"
 )
 
 type consumer interface {
@@ -37,79 +38,64 @@ func (c *Collector) broadcast() {
 		for {
 			select {
 			case event := <-c.queue:
+				data := event.marshall()
 				for _, consumer := range c.consumers {
-					consumer.Consume(event.marshall())
+					consumer.Consume(data)
 				}
 			}
 		}
 	}()
 }
 
-type Notifier interface {
-	GetName() string
-	GetProvider() string
-}
-
-type collect struct {
-	notifier Notifier
-	data     []byte
-	err      error
-}
-
 type Collect struct {
-	workflowSlug string
-	collection   chan collect
-	broadcast    chan<- event
+	event *event
+
+	queue    chan<- event
+	logLevel zerolog.Level
 }
 
-func (c *Collector) NewCollect() Collect {
-	return Collect{
-		workflowSlug: c.workflow.Slug,
-		collection:   make(chan collect, len(c.workflow.Outputs)+1),
-		broadcast:    c.queue,
+func (c *Collector) Collect(from *workflow.Input, data []byte) *Collect {
+	return &Collect{
+		event: &event{
+			WorkflowSlug: c.workflow.Slug,
+			From: source{
+				Provider: from.Source.String(),
+				Name:     from.Name,
+				Data:     string(data),
+			},
+			State:       succeed,
+			CollectedAt: time.Now().UTC(),
+			Message:     "event sent successfully",
+		},
+
+		logLevel: zerolog.InfoLevel,
+		queue:    c.queue,
 	}
 }
 
-func (c Collect) Add(from Notifier, data []byte, err error, lvl ...zerolog.Level) {
-	logger.LogErr(err, lvl...)
-
-	c.collection <- collect{
-		notifier: from,
-		data:     data,
-		err:      err,
+func (c *Collect) WithOutput(output *workflow.Output, data []byte) *Collect {
+	c.event.To = source{
+		Provider: output.Destination.String(),
+		Name:     output.Name,
+		Data:     string(data),
 	}
+	return c
 }
 
-func (c Collect) Consume() {
-	close(c.collection)
+func (c *Collect) WithError(err error) *Collect {
+	c.event.Message = err.Error()
+	c.event.State = failed
+	c.logLevel = zerolog.ErrorLevel
+	return c
+}
 
-	// TODO: refactor this not proud of it
-	// this is a hack to get the same uuid for both sent and received events
-	// this is needed to link the sent and received events in the webui
-	id := uuid.NewString()
-	for col := range c.collection {
-		a := sent
-		if _, ok := col.notifier.(*workflow.Input); ok {
-			id = uuid.NewString()
-			a = received
-		}
+func (c *Collect) WithLogLevel(lvl zerolog.Level) *Collect {
+	c.logLevel = lvl
+	return c
+}
 
-		e := event{
-			RelatedId:    id,
-			WorkflowSlug: c.workflowSlug,
-			Action:       a,
-			Notifier:     col.notifier.GetName(),
-			Provider:     col.notifier.GetProvider(),
-			Data:         string(col.data),
-			State:        succeed,
-			Message:      "event sent to output",
-		}
-
-		if col.err != nil {
-			e.State = failed
-			e.Message = col.err.Error()
-		}
-
-		c.broadcast <- e
-	}
+func (c *Collect) Send() {
+	c.event.Id = uuid.NewString()
+	logger.Get().WithLevel(c.logLevel).Msgf(c.event.Message)
+	c.queue <- *c.event
 }

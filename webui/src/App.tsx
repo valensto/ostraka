@@ -23,16 +23,9 @@ export default function App() {
             setWorkflows(prevState => {
                 return prevState.map((workflow) => {
                     if (workflow.slug === data.workflow_slug) {
-                        const updatedEvents = {
-                            ...workflow.events,
-                            [data.action]: [
-                                data,
-                                ...(workflow.events[data.action] || []),
-                            ]
-                        };
                         return {
                             ...workflow,
-                            events: updatedEvents
+                            events: [...workflow.events, data]
                         };
                     }
                     return workflow;
