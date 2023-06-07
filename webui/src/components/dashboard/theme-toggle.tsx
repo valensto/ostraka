@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { Moon, Sun } from "lucide-react";
-import { getThemeFromLocalStorage, setThemeToLocalStorage } from "@/utils/theme-utils";
+import { getThemeFromLocalStorage, setThemeToLocalStorage } from "@/utils/theme";
 
 const ThemeToggle = () => {
   const [isDarkMode, setIsDarkMode] = useState(getThemeFromLocalStorage() === "dark");
