@@ -1,8 +1,6 @@
 package collector
 
 import (
-	"encoding/json"
-	"github.com/valensto/ostraka/internal/logger"
 	"time"
 )
 
@@ -31,12 +29,22 @@ type source struct {
 	Data     string `json:"data"`
 }
 
-func (e *Event) Marshall() []byte {
-	marshal, err := json.Marshal(e)
-	if err != nil {
-		logger.Get().Error().Msgf("error %s marshalling event: %+v", err.Error(), e)
-		return nil
+func (e *Event) ToMap() map[string]any {
+	return map[string]any{
+		"id":            e.Id,
+		"workflow_slug": e.WorkflowSlug,
+		"from": map[string]any{
+			"provider": e.From.Provider,
+			"name":     e.From.Name,
+			"data":     e.From.Data,
+		},
+		"to": map[string]any{
+			"provider": e.To.Provider,
+			"name":     e.To.Name,
+			"data":     e.To.Data,
+		},
+		"state":        e.State,
+		"message":      e.Message,
+		"collected_at": e.CollectedAt,
 	}
-
-	return marshal
 }

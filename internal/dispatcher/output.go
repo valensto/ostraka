@@ -8,12 +8,12 @@ import (
 )
 
 type publisher interface {
-	Publish(events <-chan []byte) error
+	Publish(events <-chan workflow.Event) error
 }
 
 func (d dispatcher) registerOutputs() error {
 	for _, output := range d.workflow.Outputs {
-		d.outputs[output] = make(chan []byte)
+		d.outputs[output] = make(chan workflow.Event)
 
 		p, err := d.getPublisher(output)
 		if err != nil {

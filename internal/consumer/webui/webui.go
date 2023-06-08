@@ -16,14 +16,14 @@ import (
 
 type Webui struct {
 	server *server.Server
-	events chan []byte
+	events chan workflow.Event
 	config env.Webui
 }
 
 func New(config env.Webui, server *server.Server, workflows []*workflow.Workflow) (*Webui, error) {
 	webui := &Webui{
 		server: server,
-		events: make(chan []byte),
+		events: make(chan workflow.Event),
 		config: config,
 	}
 
@@ -42,7 +42,7 @@ func New(config env.Webui, server *server.Server, workflows []*workflow.Workflow
 }
 
 func (webui *Webui) Consume(event collector.Event) {
-	webui.events <- event.Marshall()
+	webui.events <- event.ToMap()
 }
 
 func (webui *Webui) basicAuth(handler http.Handler) http.HandlerFunc {

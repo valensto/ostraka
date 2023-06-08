@@ -1,7 +1,6 @@
 package dispatcher
 
 import (
-	"encoding/json"
 	"fmt"
 	"github.com/rs/zerolog"
 	"github.com/valensto/ostraka/internal/collector"
@@ -14,7 +13,7 @@ import (
 type dispatcher struct {
 	workflow  *workflow.Workflow
 	server    *server.Server
-	outputs   map[*workflow.Output]chan []byte
+	outputs   map[*workflow.Output]chan workflow.Event
 	collector *collector.Collector
 }
 
@@ -29,7 +28,7 @@ func Dispatch(config *env.Config, workflows []*workflow.Workflow) error {
 		d := &dispatcher{
 			workflow:  wf,
 			server:    s,
-			outputs:   make(map[*workflow.Output]chan []byte, len(wf.Outputs)),
+			outputs:   make(map[*workflow.Output]chan workflow.Event, len(wf.Outputs)),
 			collector: collector.New(wf, consumer),
 		}
 
@@ -47,19 +46,13 @@ func Dispatch(config *env.Config, workflows []*workflow.Workflow) error {
 	return s.Run()
 }
 
-func (d dispatcher) dispatch(input *workflow.Input, data []byte) {
+func (d dispatcher) dispatch(input *workflow.Input, data []byte) error {
 	collect := d.collector.Collect(input, data)
 
 	event, err := input.Decoder.Decode(data)
 	if err != nil {
 		collect.WithError(fmt.Errorf("error decoding input: %w", err)).Send()
-		return
-	}
-
-	marshalled, err := json.Marshal(event)
-	if err != nil {
-		collect.WithError(fmt.Errorf("error marshalling event: %w", err)).Send()
-		return
+		return collect.Error()
 	}
 
 	for output, c := range d.outputs {
@@ -70,7 +63,9 @@ func (d dispatcher) dispatch(input *workflow.Input, data []byte) {
 			continue
 		}
 
-		collect.WithOutput(output, marshalled).Send()
-		c <- marshalled
+		collect.WithOutput(output, event).Send()
+		c <- event
 	}
+
+	return nil
 }

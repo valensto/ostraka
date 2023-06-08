@@ -32,7 +32,7 @@ func NewPublisher(output *workflow.Output) (*Publisher, error) {
 	return &p, nil
 }
 
-func (p *Publisher) Publish(events <-chan []byte) error {
+func (p *Publisher) Publish(events <-chan workflow.Event) error {
 	l := logger.Get()
 	l.Info().Msgf("publisher %s of type MQTT registered. Publishing to topic %s", p.name, p.MQTT.params.Topic)
 
@@ -40,7 +40,7 @@ func (p *Publisher) Publish(events <-chan []byte) error {
 		for {
 			select {
 			case event := <-events:
-				token := p.client.Publish(p.MQTT.params.Topic, 1, false, event)
+				token := p.client.Publish(p.MQTT.params.Topic, 1, false, event.Bytes())
 				token.Wait()
 				if token.Error() != nil {
 					l.Error().Msgf("error publishing to topic: %s", p.MQTT.params.Topic)

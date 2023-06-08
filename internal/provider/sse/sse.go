@@ -43,7 +43,7 @@ func NewPublisher(output *workflow.Output, server *server.Server) (*Publisher, e
 	return o, nil
 }
 
-func (o *Publisher) Publish(events <-chan []byte) error {
+func (o *Publisher) Publish(events <-chan workflow.Event) error {
 	endpoint := server.Endpoint{
 		Method:  server.GET,
 		Path:    o.params.Endpoint,
@@ -97,7 +97,7 @@ func (o *Publisher) endpoint() http.HandlerFunc {
 	}
 }
 
-func (o *Publisher) listen(events <-chan []byte) {
+func (o *Publisher) listen(events <-chan workflow.Event) {
 	go func() {
 		for {
 			select {
@@ -108,7 +108,7 @@ func (o *Publisher) listen(events <-chan []byte) {
 				delete(o.clients, cl)
 
 			case event := <-events:
-				msg := format(fmt.Sprintf("%d", o.eventCounter), "message", event)
+				msg := format(fmt.Sprintf("%d", o.eventCounter), "message", event.Bytes())
 				o.eventCounter++
 				for cl := range o.clients {
 					cl <- msg.Bytes()

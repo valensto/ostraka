@@ -9,7 +9,7 @@ import (
 )
 
 type subscriber interface {
-	Subscribe(dispatch func(from *workflow.Input, data []byte)) error
+	Subscribe(dispatch func(input *workflow.Input, data []byte) error) error
 }
 
 func (d dispatcher) registerInputs() error {

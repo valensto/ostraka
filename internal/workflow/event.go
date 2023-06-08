@@ -1,16 +1,18 @@
 package workflow
 
-import "fmt"
+import (
+	"encoding/json"
+	"fmt"
+)
 
-type EventId string
+type Event map[string]any
 
-func (id EventId) String() string {
-	return string(id)
-}
-
-type Event struct {
-	Id   EventId
-	Data []byte
+func (e Event) Bytes() []byte {
+	b, ok := json.Marshal(e)
+	if ok != nil {
+		return nil
+	}
+	return b
 }
 
 type EventType struct {

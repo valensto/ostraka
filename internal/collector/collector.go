@@ -48,6 +48,7 @@ func (c *Collector) broadcast() {
 
 type Collect struct {
 	event *Event
+	err   error
 
 	queue    chan<- Event
 	logLevel zerolog.Level
@@ -72,16 +73,17 @@ func (c *Collector) Collect(from *workflow.Input, data []byte) *Collect {
 	}
 }
 
-func (c *Collect) WithOutput(output *workflow.Output, data []byte) *Collect {
+func (c *Collect) WithOutput(output *workflow.Output, event workflow.Event) *Collect {
 	c.event.To = source{
 		Provider: output.Destination.String(),
 		Name:     output.Name,
-		Data:     string(data),
+		Data:     string(event.Bytes()),
 	}
 	return c
 }
 
 func (c *Collect) WithError(err error) *Collect {
+	c.err = err
 	c.event.Message = err.Error()
 	c.event.State = failed
 	c.logLevel = zerolog.ErrorLevel
@@ -97,4 +99,8 @@ func (c *Collect) Send() {
 	c.event.Id = uuid.NewString()
 	logger.Get().WithLevel(c.logLevel).Msgf(c.event.Message)
 	c.queue <- *c.event
+}
+
+func (c *Collect) Error() error {
+	return c.err
 }

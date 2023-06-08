@@ -28,7 +28,7 @@ func UnmarshallDecoder(format string, mappers []Mapper) (*Decoder, error) {
 	}, nil
 }
 
-func (d Decoder) Decode(data []byte) (map[string]any, error) {
+func (d Decoder) Decode(data []byte) (Event, error) {
 	if d.format != JSON {
 		return nil, fmt.Errorf("unknown decoder type: %s", d.format)
 	}
@@ -39,7 +39,7 @@ func (d Decoder) Decode(data []byte) (map[string]any, error) {
 		return nil, fmt.Errorf("error decoding event: %w", err)
 	}
 
-	var decoded = make(map[string]any, len(d.event.fields))
+	var event = make(Event, len(d.event.fields))
 	for _, field := range d.event.fields {
 		sf, ok := d.getSourceFieldByTarget(field.name)
 		if !ok && field.required {
@@ -51,10 +51,10 @@ func (d Decoder) Decode(data []byte) (map[string]any, error) {
 			return nil, fmt.Errorf("required field %s not found", field.name)
 		}
 
-		decoded[field.name] = v
+		event[field.name] = v
 	}
 
-	return decoded, nil
+	return event, nil
 }
 
 func (d Decoder) getSourceFieldByTarget(target string) (source string, found bool) {
