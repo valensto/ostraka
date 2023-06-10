@@ -1,13 +1,12 @@
 package webui
 
 import (
-	"fmt"
 	"github.com/valensto/ostraka/internal/collector"
 	"github.com/valensto/ostraka/internal/config/env"
 	"github.com/valensto/ostraka/internal/logger"
-	"github.com/valensto/ostraka/internal/provider/sse"
 	"github.com/valensto/ostraka/internal/server"
 	"github.com/valensto/ostraka/internal/workflow"
+	"github.com/valensto/ostraka/internal/workflow/provider/sse"
 	"golang.org/x/crypto/bcrypt"
 	"html/template"
 	"net/http"
@@ -31,14 +30,9 @@ func New(config env.Webui, server *server.Server, workflows []*workflow.Workflow
 	server.Router.Get("/webui/dashboard", webui.basicAuth(webui.dashboard()))
 	server.Router.Get("/webui/workflows", webui.workflows(workflows))
 
-	output := workflow.WebUIOutput()
-	p, err := sse.NewPublisher(output, server)
-	if err != nil {
-		return nil, fmt.Errorf("error getting publisher: %w", err)
-	}
-
 	logger.Get().Info().Msgf("webui running on %s:%s/webui/dashboard", webui.server.Host, webui.server.Port)
-	return webui, p.Publish(webui.events)
+
+	return webui, sse.WebUIPublisher().Publish(webui.events, server)
 }
 
 func (webui *Webui) Consume(event collector.Event) {

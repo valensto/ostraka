@@ -51,3 +51,40 @@ type conditionModel struct {
 	Value      any              `yaml:"value,omitempty"`
 	Conditions []conditionModel `yaml:"conditions,omitempty"`
 }
+
+type middlewareModel struct {
+	CORS []corsModel `yaml:"cors"`
+	Auth []authModel `yaml:"auth"`
+}
+
+type corsModel struct {
+	Name             string   `yaml:"name"`
+	AllowedOrigins   []string `yaml:"allowed_origins"`
+	AllowedMethods   []string `yaml:"allowed_methods"`
+	AllowedHeaders   []string `yaml:"allowed_headers"`
+	AllowCredentials bool     `yaml:"allow_credentials"`
+	MaxAge           int      `yaml:"max_age"`
+}
+
+type authModel struct {
+	Name   string      `yaml:"name"`
+	Type   string      `yaml:"type"`
+	Params interface{} `yaml:"params"`
+}
+
+type jwtParamsModel struct {
+	Header           string       `yaml:"header"`
+	Secret           string       `yaml:"secret"`
+	Algorithm        string       `yaml:"algorithm"`
+	Issuer           string       `yaml:"issuer"`
+	Audience         string       `yaml:"audience"`
+	Subject          string       `yaml:"subject"`
+	VerifyExpiration bool         `yaml:"verify_expiration"`
+	MaxAge           int          `yaml:"max_age"`
+	Payload          []fieldModel `yaml:"payload"`
+}
+
+type tokenParamsModel struct {
+	Token      string `yaml:"token"`
+	QueryParam string `yaml:"query_param"`
+}

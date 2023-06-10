@@ -1,7 +1,6 @@
 package workflow
 
 import (
-	"encoding/json"
 	"fmt"
 )
 
@@ -9,10 +8,19 @@ type Output struct {
 	Name        string
 	Destination Destination
 	Condition   *Condition
-	params      any
 }
 
-func UnmarshallOutput(name, destination string, condition *Condition, params any) (*Output, error) {
+func WebUIOutput() *Output {
+	return &Output{
+		Name:        "webui",
+		Destination: SSE,
+		/*params: params.SSE{
+			Endpoint: "/webui/consume",
+		},*/
+	}
+}
+
+func UnmarshallOutput(name, destination string, condition *Condition) (*Output, error) {
 	if name == "" {
 		return nil, fmt.Errorf("output name is empty")
 	}
@@ -22,51 +30,9 @@ func UnmarshallOutput(name, destination string, condition *Condition, params any
 		return nil, err
 	}
 
-	o := Output{
+	return &Output{
 		Name:        name,
 		Destination: dest,
 		Condition:   condition,
-		params:      params,
-	}
-
-	err = o.unmarshallParams()
-	if err != nil {
-		return nil, err
-	}
-
-	return &o, nil
-}
-
-func WebUIOutput() *Output {
-	return &Output{
-		Name:        "webui",
-		Destination: SSE,
-		params: SSEParams{
-			Endpoint: "/webui/consume",
-		},
-	}
-}
-
-func (o *Output) unmarshallParams() error {
-	marshalled, err := json.Marshal(o.params)
-	if err != nil {
-		return fmt.Errorf("error marshalling output params: %w", err)
-	}
-
-	var params parameter
-	switch o.Destination {
-	case SSE:
-		var sse SSEParams
-		err = unmarshalParams(marshalled, &sse)
-		if err != nil {
-			return err
-		}
-
-		params = sse
-	default:
-		return fmt.Errorf("unknown output type: %s", o.Destination)
-	}
-
-	o.params = params
-	return params.validate()
+	}, nil
 }

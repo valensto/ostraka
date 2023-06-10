@@ -2,37 +2,42 @@ package mqtt
 
 import (
 	"github.com/valensto/ostraka/internal/logger"
+	"github.com/valensto/ostraka/internal/server"
 	"github.com/valensto/ostraka/internal/workflow"
 )
 
 type Publisher struct {
 	MQTT
-	*workflow.Output
+	output *workflow.Output
 }
 
-func NewPublisher(output *workflow.Output) (*Publisher, error) {
-	params, err := output.MQTTParams()
+func NewPublisher(output *workflow.Output, params []byte) (*Publisher, error) {
+	p, err := unmarshalParams(params)
 	if err != nil {
 		return nil, err
 	}
 
-	p := Publisher{
+	publisher := Publisher{
 		MQTT: MQTT{
 			name:   output.Name,
-			params: params,
+			params: p,
 		},
-		Output: output,
+		output: output,
 	}
 
-	err = p.MQTT.connect()
+	err = publisher.MQTT.connect()
 	if err != nil {
 		return nil, err
 	}
 
-	return &p, nil
+	return &publisher, nil
 }
 
-func (p *Publisher) Publish(events <-chan workflow.Event) error {
+func (p *Publisher) Output() *workflow.Output {
+	return p.output
+}
+
+func (p *Publisher) Publish(events <-chan workflow.Event, _ *server.Server) error {
 	l := logger.Get()
 	l.Info().Msgf("publisher %s of type MQTT registered. Publishing to topic %s", p.name, p.MQTT.params.Topic)
 

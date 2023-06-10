@@ -2,6 +2,7 @@ package static
 
 import (
 	"fmt"
+	"github.com/valensto/ostraka/internal/workflow/provider"
 
 	"github.com/go-playground/validator/v10"
 	"gopkg.in/yaml.v3"
@@ -11,21 +12,21 @@ import (
 
 func BuildWorkflows(contentFile ContentFile) ([]*workflow.Workflow, error) {
 	var wfs []*workflow.Workflow
-	for fname, content := range contentFile {
+	for fn, content := range contentFile {
 		var sw workflowModel
 		err := yaml.Unmarshal(content, &sw)
 		if err != nil {
-			return nil, fmt.Errorf("error parsing YAML wf: %w in file %s", err, fname)
+			return nil, fmt.Errorf("error parsing YAML wf: %w in file %s", err, fn)
 		}
 
 		err = validator.New().Struct(sw)
 		if err != nil {
-			return nil, fmt.Errorf("error: validating wf: %w in file %s", err, fname)
+			return nil, fmt.Errorf("error: validating wf: %w in file %s", err, fn)
 		}
 
 		wf, err := sw.toWorkflow()
 		if err != nil {
-			return nil, fmt.Errorf("error converting workflowModel to workflow: %w in file %s", err, fname)
+			return nil, fmt.Errorf("error converting workflowModel to workflow: %w in file %s", err, fn)
 		}
 
 		wfs = append(wfs, wf)
@@ -40,23 +41,23 @@ func (sw workflowModel) toWorkflow() (*workflow.Workflow, error) {
 		return nil, err
 	}
 
-	inputs := make([]*workflow.Input, len(sw.Inputs))
+	subscribers := make([]workflow.Subscriber, len(sw.Inputs))
 	for i, si := range sw.Inputs {
-		inputs[i], err = si.toInput(event)
+		subscribers[i], err = si.toSubscriber(event)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	outputs := make([]*workflow.Output, len(sw.Outputs))
+	publishers := make([]workflow.Publisher, len(sw.Outputs))
 	for i, so := range sw.Outputs {
-		outputs[i], err = so.toOutput()
+		publishers[i], err = so.toPublisher()
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	return workflow.New(sw.Name, inputs, outputs)
+	return workflow.New(sw.Name, subscribers, publishers)
 }
 
 func (sc conditionModel) toCondition() (*workflow.Condition, error) {
@@ -86,7 +87,7 @@ func (se eventTypeModel) toEvent() (*workflow.EventType, error) {
 	return workflow.UnmarshallEventType(se.Format, fields...)
 }
 
-func (si inputModel) toInput(event *workflow.EventType) (*workflow.Input, error) {
+func (si inputModel) toSubscriber(event *workflow.EventType) (workflow.Subscriber, error) {
 	mappers := make([]workflow.Mapper, len(si.Decoder.Mappers))
 	for _, sm := range si.Decoder.Mappers {
 		mappers = append(mappers, workflow.Mapper{
@@ -100,10 +101,15 @@ func (si inputModel) toInput(event *workflow.EventType) (*workflow.Input, error)
 		return nil, err
 	}
 
-	return workflow.UnmarshallInput(si.Name, si.Source, *decoder, si.Params, event)
+	input, err := workflow.UnmarshallInput(si.Name, si.Source, *decoder, event)
+	if err != nil {
+		return nil, err
+	}
+
+	return provider.NewSubscriber(input, si.Params)
 }
 
-func (so outputModel) toOutput() (*workflow.Output, error) {
+func (so outputModel) toPublisher() (workflow.Publisher, error) {
 	var condition *workflow.Condition
 	if so.Condition != nil {
 		c, err := so.Condition.toCondition()
@@ -114,5 +120,10 @@ func (so outputModel) toOutput() (*workflow.Output, error) {
 		condition = c
 	}
 
-	return workflow.UnmarshallOutput(so.Name, so.Destination, condition, so.Params)
+	output, err := workflow.UnmarshallOutput(so.Name, so.Destination, condition)
+	if err != nil {
+		return nil, err
+	}
+
+	return provider.NewPublisher(output, so.Params)
 }

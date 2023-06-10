@@ -7,14 +7,13 @@ import (
 	"time"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
-	"github.com/valensto/ostraka/internal/workflow"
 )
 
 type MQTT struct {
 	client    mqtt.Client
 	connected chan bool
 	name      string
-	params    workflow.MQTTParams
+	params    *Params
 }
 
 func (m *MQTT) connect() error {

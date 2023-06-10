@@ -17,8 +17,8 @@ func mapWorkflowToDTO(workflows []*workflow.Workflow) []workflowDTO {
 		dtos = append(dtos, workflowDTO{
 			Name:      wf.Name,
 			Slug:      wf.Slug,
-			NbInputs:  len(wf.Inputs),
-			NbOutputs: len(wf.Outputs),
+			NbInputs:  len(wf.Subscribers),
+			NbOutputs: len(wf.Publishers),
 		})
 	}
 	return dtos

@@ -11,9 +11,9 @@ import (
 )
 
 type Publisher struct {
-	server *server.Server
-	*workflow.Output
-	params        workflow.SSEParams
+	server        *server.Server
+	output        *workflow.Output
+	params        *Params
 	clients       map[client]bool
 	connecting    chan client
 	disconnecting chan client
@@ -23,27 +23,33 @@ type Publisher struct {
 
 type client chan []byte
 
-func NewPublisher(output *workflow.Output, server *server.Server) (*Publisher, error) {
-	params, err := output.SSEParams()
+func NewPublisher(output *workflow.Output, params []byte) (*Publisher, error) {
+	p, err := unmarshalParams(params)
 	if err != nil {
 		return nil, err
 	}
 
-	o := &Publisher{
-		server:        server,
-		Output:        output,
-		params:        params,
+	return &Publisher{
+		output:        output,
+		params:        p,
 		clients:       make(map[client]bool),
 		connecting:    make(chan client),
 		disconnecting: make(chan client),
 		bufSize:       2,
 		eventCounter:  0,
-	}
-
-	return o, nil
+	}, nil
 }
 
-func (o *Publisher) Publish(events <-chan workflow.Event) error {
+func (o *Publisher) Output() *workflow.Output {
+	return o.output
+}
+
+func (o *Publisher) Publish(events <-chan workflow.Event, mux *server.Server) error {
+	if mux == nil {
+		return fmt.Errorf("server is required to register publisher of type SSE")
+	}
+
+	o.server = mux
 	endpoint := server.Endpoint{
 		Method:  server.GET,
 		Path:    o.params.Endpoint,
@@ -57,44 +63,8 @@ func (o *Publisher) Publish(events <-chan workflow.Event) error {
 		return err
 	}
 
-	logger.Get().Info().Msgf("publisher %s of type SSE registered. Sending to endpoint %s", o.Output.Name, o.params.Endpoint)
+	logger.Get().Info().Msgf("publisher %s of type SSE registered. Sending to endpoint %s", o.output.Name, o.params.Endpoint)
 	return nil
-}
-
-func (o *Publisher) endpoint() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		fl, ok := w.(http.Flusher)
-		if !ok {
-			logger.Get().Error().Msg("error flushing response writer: flushing not supported")
-			o.server.Respond(w, r, http.StatusNotImplemented, nil)
-			return
-		}
-
-		done := r.Context().Done()
-
-		h := w.Header()
-		h.Set("Access-Control-Allow-Origin", "*")
-		h.Set("Access-Control-Allow-Headers", "Content-Type")
-		h.Set("Cache-Control", "no-cache")
-		h.Set("Connection", "keep-alive")
-		h.Set("Content-Type", "text/event-stream")
-
-		cl := make(client, o.bufSize)
-		o.connecting <- cl
-
-		for {
-			select {
-			case <-done:
-				o.disconnecting <- cl
-				return
-
-			case event := <-cl:
-				// send webui success notification type sent
-				_, _ = w.Write(event)
-				fl.Flush()
-			}
-		}
-	}
 }
 
 func (o *Publisher) listen(events <-chan workflow.Event) {
@@ -116,6 +86,39 @@ func (o *Publisher) listen(events <-chan workflow.Event) {
 			}
 		}
 	}()
+}
+
+func (o *Publisher) endpoint() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		fl, ok := w.(http.Flusher)
+		if !ok {
+			logger.Get().Error().Msg("error flushing response writer: flushing not supported")
+			o.server.Respond(w, r, http.StatusNotImplemented, nil)
+			return
+		}
+
+		h := w.Header()
+		h.Set("Access-Control-Allow-Origin", "*")
+		h.Set("Access-Control-Allow-Headers", "Content-Type")
+		h.Set("Cache-Control", "no-cache")
+		h.Set("Connection", "keep-alive")
+		h.Set("Content-Type", "text/event-stream")
+
+		cl := make(client, o.bufSize)
+		o.connecting <- cl
+
+		for {
+			select {
+			case <-r.Context().Done():
+				o.disconnecting <- cl
+				return
+
+			case event := <-cl:
+				_, _ = w.Write(event)
+				fl.Flush()
+			}
+		}
+	}
 }
 
 func format(id, event string, data []byte) *bytes.Buffer {

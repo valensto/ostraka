@@ -36,7 +36,7 @@ package workflow
 						},
 					},
 				},
-				Inputs: []Input{
+				Subscribers: []Input{
 					{
 						Name:   "webhook-orders",
 						Source: "webhook",
@@ -91,7 +91,7 @@ package workflow
 						},
 					},
 				},
-				Outputs: []Output{
+				Publishers: []Output{
 					{
 						Name:        "sse-orders",
 						Destination: "sse",
@@ -138,18 +138,18 @@ package workflow
 			require.NoError(t, err)
 			require.Equal(t, tt.want.Event, got.Event)
 
-			for i := range tt.want.Inputs {
-				require.Equal(t, tt.want.Inputs[i].Name, got.Inputs[i].Name)
-				require.Equal(t, tt.want.Inputs[i].Source, got.Inputs[i].Type)
-				require.Equal(t, tt.want.Inputs[i].params, got.Inputs[i].Params)
-				require.Equal(t, tt.want.Inputs[i].Decoder.Mappers, got.Inputs[i].Decoder.Mappers)
+			for i := range tt.want.Subscribers {
+				require.Equal(t, tt.want.Subscribers[i].Name, got.Subscribers[i].Name)
+				require.Equal(t, tt.want.Subscribers[i].Source, got.Subscribers[i].Type)
+				require.Equal(t, tt.want.Subscribers[i].params, got.Subscribers[i].Params)
+				require.Equal(t, tt.want.Subscribers[i].Decoder.Mappers, got.Subscribers[i].Decoder.Mappers)
 			}
 
-			for i := range tt.want.Outputs {
-				require.Equal(t, tt.want.Outputs[i].Name, got.Outputs[i].Name)
-				require.Equal(t, tt.want.Outputs[i].Destination, got.Outputs[i].Type)
-				require.Equal(t, tt.want.Outputs[i].Params, got.Outputs[i].Params)
-				require.Equal(t, tt.want.Outputs[i].Condition, got.Outputs[i].Condition)
+			for i := range tt.want.Publishers {
+				require.Equal(t, tt.want.Publishers[i].Name, got.Publishers[i].Name)
+				require.Equal(t, tt.want.Publishers[i].Destination, got.Publishers[i].Type)
+				require.Equal(t, tt.want.Publishers[i].Params, got.Publishers[i].Params)
+				require.Equal(t, tt.want.Publishers[i].Condition, got.Publishers[i].Condition)
 			}
 		})
 	}

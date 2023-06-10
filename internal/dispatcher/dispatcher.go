@@ -28,22 +28,46 @@ func Dispatch(config *env.Config, workflows []*workflow.Workflow) error {
 		d := &dispatcher{
 			workflow:  wf,
 			server:    s,
-			outputs:   make(map[*workflow.Output]chan workflow.Event, len(wf.Outputs)),
+			outputs:   make(map[*workflow.Output]chan workflow.Event, len(wf.Publishers)),
 			collector: collector.New(wf, consumer),
 		}
 
-		err := d.registerInputs()
+		err := d.registerInputs(s)
 		if err != nil {
 			return err
 		}
 
-		err = d.registerOutputs()
+		err = d.registerOutputs(s)
 		if err != nil {
 			return err
 		}
 	}
 
 	return s.Run()
+}
+
+func (d dispatcher) registerInputs(mux *server.Server) error {
+	for _, s := range d.workflow.Subscribers {
+		err := s.Subscribe(d.dispatch, mux)
+		if err != nil {
+			return fmt.Errorf("error registering subscriber: %w", err)
+		}
+	}
+
+	return nil
+}
+
+func (d dispatcher) registerOutputs(mux *server.Server) error {
+	for _, p := range d.workflow.Publishers {
+		d.outputs[p.Output()] = make(chan workflow.Event)
+
+		err := p.Publish(d.outputs[p.Output()], mux)
+		if err != nil {
+			return fmt.Errorf("error registering publisher: %w", err)
+		}
+	}
+
+	return nil
 }
 
 func (d dispatcher) dispatch(input *workflow.Input, data []byte) error {
