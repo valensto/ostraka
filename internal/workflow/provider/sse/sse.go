@@ -50,14 +50,14 @@ func NewPublisher(output *workflow.Output, params []byte, middlewares *middlewar
 	}
 
 	if p.Auth != "" {
-		publisher.authenticator, err = middlewares.Web.GetAuthenticator(p.Auth)
+		publisher.authenticator, err = middlewares.HTTP.GetAuthenticator(p.Auth)
 		if err != nil {
 			return nil, err
 		}
 	}
 
 	if p.CORS != "" {
-		publisher.cors, err = middlewares.Web.GetCORS(p.CORS)
+		publisher.cors, err = middlewares.HTTP.GetCORS(p.CORS)
 		if err != nil {
 			return nil, err
 		}

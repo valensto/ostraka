@@ -67,7 +67,7 @@ func (sw workflowModel) toWorkflow() (*workflow.Workflow, error) {
 
 func (ms middlewaresModel) toMiddleware() (*middleware.Middlewares, error) {
 	middlewares := &middleware.Middlewares{
-		Web: middleware.Web{
+		HTTP: middleware.HTTP{
 			CORS:           make(map[string]middleware.CORS, len(ms.CORS)),
 			Authenticators: make(map[string]middleware.Authenticator, len(ms.Auth)),
 		},
@@ -82,7 +82,7 @@ func (ms middlewaresModel) toMiddleware() (*middleware.Middlewares, error) {
 			return nil, fmt.Errorf("error creating authenticator %s: %w", ma.Name, err)
 		}
 
-		middlewares.Web.Authenticators[ma.Name] = a
+		middlewares.HTTP.Authenticators[ma.Name] = a
 	}
 
 	for _, mc := range ms.CORS {
@@ -97,7 +97,7 @@ func (ms middlewaresModel) toMiddleware() (*middleware.Middlewares, error) {
 			return nil, fmt.Errorf("error creating cors %s: %w", mc.Name, err)
 		}
 
-		middlewares.Web.CORS[mc.Name] = *c
+		middlewares.HTTP.CORS[mc.Name] = *c
 	}
 
 	return middlewares, nil
