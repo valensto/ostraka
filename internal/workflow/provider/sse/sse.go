@@ -5,15 +5,22 @@ import (
 	"fmt"
 	"github.com/valensto/ostraka/internal/logger"
 	"github.com/valensto/ostraka/internal/server"
+	"github.com/valensto/ostraka/internal/workflow/middleware"
 	"net/http"
 
 	"github.com/valensto/ostraka/internal/workflow"
 )
 
+const SSE = "sse"
+
 type Publisher struct {
-	server        *server.Server
+	server *server.Server
+
 	output        *workflow.Output
 	params        *Params
+	authenticator middleware.Authenticator
+	cors          *middleware.CORS
+
 	clients       map[client]bool
 	connecting    chan client
 	disconnecting chan client
@@ -23,21 +30,40 @@ type Publisher struct {
 
 type client chan []byte
 
-func NewPublisher(output *workflow.Output, params []byte) (*Publisher, error) {
+func NewPublisher(output *workflow.Output, params []byte, middlewares *middleware.Middlewares) (*Publisher, error) {
 	p, err := unmarshalParams(params)
 	if err != nil {
 		return nil, err
 	}
 
-	return &Publisher{
+	publisher := Publisher{
 		output:        output,
 		params:        p,
+		authenticator: nil,
+		cors:          nil,
+
 		clients:       make(map[client]bool),
 		connecting:    make(chan client),
 		disconnecting: make(chan client),
 		bufSize:       2,
 		eventCounter:  0,
-	}, nil
+	}
+
+	if p.Auth != "" {
+		publisher.authenticator, err = middlewares.Web.GetAuthenticator(p.Auth)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if p.CORS != "" {
+		publisher.cors, err = middlewares.Web.GetCORS(p.CORS)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return &publisher, nil
 }
 
 func (o *Publisher) Output() *workflow.Output {
@@ -53,7 +79,9 @@ func (o *Publisher) Publish(events <-chan workflow.Event, mux *server.Server) er
 	endpoint := server.Endpoint{
 		Method:  server.GET,
 		Path:    o.params.Endpoint,
+		Cors:    o.cors,
 		Handler: o.endpoint(),
+		Auth:    o.authenticator,
 	}
 
 	o.listen(events)

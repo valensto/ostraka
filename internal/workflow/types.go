@@ -29,63 +29,6 @@ func (f Format) isValid() error {
 	}
 }
 
-type Source string
-
-const (
-	Webhook Source = "webhook"
-	MQTTSub Source = "mqtt"
-)
-
-func getSource(src string) (Source, error) {
-	s := Source(src)
-	if err := s.isValid(); err != nil {
-		return "", err
-	}
-	return s, nil
-}
-
-func (src Source) String() string {
-	return string(src)
-}
-
-func (src Source) isValid() error {
-	switch src {
-	case Webhook, MQTTSub:
-		return nil
-	default:
-		return fmt.Errorf("invalid source: %s", src)
-	}
-}
-
-type Destination string
-
-const (
-	SSE     Destination = "sse"
-	Email   Destination = "email"
-	MQTTPub Destination = "mqtt"
-)
-
-func getDestination(dest string) (Destination, error) {
-	d := Destination(dest)
-	if err := d.isValid(); err != nil {
-		return "", err
-	}
-	return d, nil
-}
-
-func (dest Destination) String() string {
-	return string(dest)
-}
-
-func (dest Destination) isValid() error {
-	switch dest {
-	case SSE, Email, MQTTPub:
-		return nil
-	default:
-		return fmt.Errorf("invalid destination: %s", dest)
-	}
-}
-
 type operator string
 
 const (

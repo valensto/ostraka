@@ -1,20 +1,25 @@
 package workflow
 
+import "fmt"
+
 type Input struct {
 	Name    string
-	Source  Source
+	Source  string
 	Decoder Decoder
 }
 
 func UnmarshallInput(name, source string, decoder Decoder, event *EventType) (*Input, error) {
-	src, err := getSource(source)
-	if err != nil {
-		return nil, err
+	if name == "" {
+		return nil, fmt.Errorf("input name is empty")
+	}
+
+	if source == "" {
+		return nil, fmt.Errorf("input source is empty")
 	}
 
 	i := &Input{
 		Name:    name,
-		Source:  src,
+		Source:  source,
 		Decoder: decoder,
 	}
 

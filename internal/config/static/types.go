@@ -4,10 +4,11 @@ package static
 type ContentFile map[string][]byte
 
 type workflowModel struct {
-	Name      string         `yaml:"name"   validate:"required"`
-	EventType eventTypeModel `yaml:"event_type"   validate:"required,dive,required"`
-	Inputs    []inputModel   `yaml:"inputs"   validate:"required,dive,required"`
-	Outputs   []outputModel  `yaml:"outputs"   validate:"required,dive,required"`
+	Name        string           `yaml:"name"   validate:"required"`
+	Middlewares middlewaresModel `yaml:"middlewares"   validate:"required"`
+	EventType   eventTypeModel   `yaml:"event_type"   validate:"required,dive,required"`
+	Inputs      []inputModel     `yaml:"inputs"   validate:"required,dive,required"`
+	Outputs     []outputModel    `yaml:"outputs"   validate:"required,dive,required"`
 }
 
 type eventTypeModel struct {
@@ -52,7 +53,7 @@ type conditionModel struct {
 	Conditions []conditionModel `yaml:"conditions,omitempty"`
 }
 
-type middlewareModel struct {
+type middlewaresModel struct {
 	CORS []corsModel `yaml:"cors"`
 	Auth []authModel `yaml:"auth"`
 }
@@ -67,24 +68,7 @@ type corsModel struct {
 }
 
 type authModel struct {
-	Name   string      `yaml:"name"`
-	Type   string      `yaml:"type"`
-	Params interface{} `yaml:"params"`
-}
-
-type jwtParamsModel struct {
-	Header           string       `yaml:"header"`
-	Secret           string       `yaml:"secret"`
-	Algorithm        string       `yaml:"algorithm"`
-	Issuer           string       `yaml:"issuer"`
-	Audience         string       `yaml:"audience"`
-	Subject          string       `yaml:"subject"`
-	VerifyExpiration bool         `yaml:"verify_expiration"`
-	MaxAge           int          `yaml:"max_age"`
-	Payload          []fieldModel `yaml:"payload"`
-}
-
-type tokenParamsModel struct {
-	Token      string `yaml:"token"`
-	QueryParam string `yaml:"query_param"`
+	Name   string `yaml:"name"`
+	Type   string `yaml:"type"`
+	Params any    `yaml:"params"`
 }

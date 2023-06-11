@@ -7,6 +7,8 @@ import (
 
 type Params struct {
 	Endpoint string `json:"endpoint"`
+	Auth     string `json:"auth"`
+	CORS     string `json:"cors"`
 }
 
 func (sse *Params) validate() error {

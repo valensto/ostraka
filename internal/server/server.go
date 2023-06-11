@@ -38,7 +38,7 @@ func (s *Server) Run() error {
 	return server.ListenAndServe()
 }
 
-func (s *Server) Respond(w http.ResponseWriter, _ *http.Request, status int, data interface{}) {
+func (s *Server) Respond(w http.ResponseWriter, _ *http.Request, status int, data any) {
 	w.Header().Add("Content-Type", "application/json")
 	w.WriteHeader(status)
 

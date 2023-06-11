@@ -1,6 +1,7 @@
 package dispatcher
 
 import (
+	"context"
 	"fmt"
 	"github.com/rs/zerolog"
 	"github.com/valensto/ostraka/internal/collector"
@@ -32,12 +33,12 @@ func Dispatch(config *env.Config, workflows []*workflow.Workflow) error {
 			collector: collector.New(wf, consumer),
 		}
 
-		err := d.registerInputs(s)
+		err := d.registerInputs()
 		if err != nil {
 			return err
 		}
 
-		err = d.registerOutputs(s)
+		err = d.registerOutputs()
 		if err != nil {
 			return err
 		}
@@ -46,34 +47,10 @@ func Dispatch(config *env.Config, workflows []*workflow.Workflow) error {
 	return s.Run()
 }
 
-func (d dispatcher) registerInputs(mux *server.Server) error {
-	for _, s := range d.workflow.Subscribers {
-		err := s.Subscribe(d.dispatch, mux)
-		if err != nil {
-			return fmt.Errorf("error registering subscriber: %w", err)
-		}
-	}
-
-	return nil
-}
-
-func (d dispatcher) registerOutputs(mux *server.Server) error {
-	for _, p := range d.workflow.Publishers {
-		d.outputs[p.Output()] = make(chan workflow.Event)
-
-		err := p.Publish(d.outputs[p.Output()], mux)
-		if err != nil {
-			return fmt.Errorf("error registering publisher: %w", err)
-		}
-	}
-
-	return nil
-}
-
-func (d dispatcher) dispatch(input *workflow.Input, data []byte) error {
+func (d dispatcher) dispatch(ctx context.Context, input *workflow.Input, data []byte) error {
 	collect := d.collector.Collect(input, data)
 
-	event, err := input.Decoder.Decode(data)
+	event, err := input.Decoder.Decode(ctx, data)
 	if err != nil {
 		collect.WithError(fmt.Errorf("error decoding input: %w", err)).Send()
 		return collect.Error()

@@ -1,38 +1,61 @@
 package webhook
 
 import (
+	"context"
 	"fmt"
 	"github.com/valensto/ostraka/internal/logger"
 	"github.com/valensto/ostraka/internal/server"
+	"github.com/valensto/ostraka/internal/workflow"
+	"github.com/valensto/ostraka/internal/workflow/middleware"
 	"io"
 	"net/http"
-
-	"github.com/valensto/ostraka/internal/workflow"
 )
 
+const Webhook = "webhook"
+
 type Subscriber struct {
-	server *server.Server
-	params *Params
-	input  *workflow.Input
+	server        *server.Server
+	params        *Params
+	input         *workflow.Input
+	authenticator middleware.Authenticator
+	cors          *middleware.CORS
 }
 
-func NewSubscriber(input *workflow.Input, params []byte) (*Subscriber, error) {
+func NewSubscriber(input *workflow.Input, params []byte, middlewares *middleware.Middlewares) (*Subscriber, error) {
 	p, err := unmarshalWebhook(params)
 	if err != nil {
 		return nil, err
 	}
 
-	return &Subscriber{
-		input:  input,
-		params: p,
-	}, nil
+	s := Subscriber{
+		input:         input,
+		params:        p,
+		authenticator: nil,
+		cors:          nil,
+	}
+
+	if p.Auth != "" {
+		s.authenticator, err = middlewares.Web.GetAuthenticator(p.Auth)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if p.CORS != "" {
+		s.cors, err = middlewares.Web.GetCORS(p.CORS)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return &s, nil
 }
 
 func (s *Subscriber) Input() *workflow.Input {
 	return s.input
 }
 
-func (s *Subscriber) Subscribe(dispatch func(input *workflow.Input, data []byte) error, mux *server.Server) error {
+func (s *Subscriber) Subscribe(dispatch func(ctx context.Context, input *workflow.Input, data []byte) error, mux *server.Server) error {
 	if mux == nil {
 		return fmt.Errorf("server is required to register subscriber of type webhook")
 	}
@@ -41,7 +64,9 @@ func (s *Subscriber) Subscribe(dispatch func(input *workflow.Input, data []byte)
 	endpoint := server.Endpoint{
 		Method:  server.POST,
 		Path:    s.params.Endpoint,
+		Cors:    s.cors,
 		Handler: s.endpoint(dispatch),
+		Auth:    s.authenticator,
 	}
 
 	err := s.server.AddSubRouter(endpoint)
@@ -53,7 +78,7 @@ func (s *Subscriber) Subscribe(dispatch func(input *workflow.Input, data []byte)
 	return nil
 }
 
-func (s *Subscriber) endpoint(dispatch func(input *workflow.Input, data []byte) error) http.HandlerFunc {
+func (s *Subscriber) endpoint(dispatch func(ctx context.Context, input *workflow.Input, data []byte) error) http.HandlerFunc {
 	type response struct {
 		Message string `json:"message"`
 	}
@@ -67,7 +92,7 @@ func (s *Subscriber) endpoint(dispatch func(input *workflow.Input, data []byte) 
 			return
 		}
 
-		err = dispatch(s.input, bytes)
+		err = dispatch(r.Context(), s.input, bytes)
 		if err != nil {
 			s.server.Respond(w, r, http.StatusBadRequest, response{
 				Message: "error dispatching event",

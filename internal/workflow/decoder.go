@@ -1,6 +1,7 @@
 package workflow
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 )
@@ -28,7 +29,7 @@ func UnmarshallDecoder(format string, mappers []Mapper) (*Decoder, error) {
 	}, nil
 }
 
-func (d Decoder) Decode(data []byte) (Event, error) {
+func (d Decoder) Decode(_ context.Context, data []byte) (Event, error) {
 	if d.format != JSON {
 		return nil, fmt.Errorf("unknown decoder type: %s", d.format)
 	}

@@ -9,14 +9,16 @@ import (
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
 
-type MQTT struct {
+const MQTT = "mqtt"
+
+type instance struct {
 	client    mqtt.Client
 	connected chan bool
 	name      string
 	params    *Params
 }
 
-func (m *MQTT) connect() error {
+func (m *instance) connect() error {
 	opts := mqtt.NewClientOptions()
 	opts.AddBroker(m.params.Broker)
 	opts.SetClientID(fmt.Sprintf("%s-%s", uuid.New(), "ostraka"))
@@ -42,7 +44,7 @@ func (m *MQTT) connect() error {
 	return nil
 }
 
-func (m *MQTT) keepalive() {
+func (m *instance) keepalive() {
 	const period = 2 * time.Second
 	var up, closed bool
 	log := logger.Get()
@@ -79,12 +81,12 @@ var connectLostHandler mqtt.ConnectionLostHandler = func(client mqtt.Client, err
 	logger.Get().Warn().Msgf("Connection lost: %v", err)
 }
 
-func (m *MQTT) Disconnect() {
+func (m *instance) Disconnect() {
 	m.client.Disconnect(500)
 	close(m.connected)
 }
 
-func (m *MQTT) Connect() error {
+func (m *instance) Connect() error {
 	if m.client.IsConnected() {
 		return nil
 	}

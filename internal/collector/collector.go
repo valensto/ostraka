@@ -59,7 +59,7 @@ func (c *Collector) Collect(from *workflow.Input, data []byte) *Collect {
 		event: &Event{
 			WorkflowSlug: c.workflow.Slug,
 			From: source{
-				Provider: from.Source.String(),
+				Provider: from.Source,
 				Name:     from.Name,
 				Data:     string(data),
 			},
@@ -75,7 +75,7 @@ func (c *Collector) Collect(from *workflow.Input, data []byte) *Collect {
 
 func (c *Collect) WithOutput(output *workflow.Output, event workflow.Event) *Collect {
 	c.event.To = source{
-		Provider: output.Destination.String(),
+		Provider: output.Destination,
 		Name:     output.Name,
 		Data:     string(event.Bytes()),
 	}

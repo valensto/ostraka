@@ -1,12 +1,14 @@
 package sse
 
-import "github.com/valensto/ostraka/internal/workflow"
+import (
+	"github.com/valensto/ostraka/internal/workflow"
+)
 
 func WebUIPublisher() *Publisher {
 	return &Publisher{
 		output: &workflow.Output{
 			Name:        "webui",
-			Destination: workflow.SSE,
+			Destination: SSE,
 		},
 		params: &Params{
 			Endpoint: "/webui/consume",

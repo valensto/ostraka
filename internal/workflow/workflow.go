@@ -1,6 +1,7 @@
 package workflow
 
 import (
+	"context"
 	"fmt"
 	"github.com/gosimple/slug"
 	"github.com/valensto/ostraka/internal/server"
@@ -12,7 +13,7 @@ type Publisher interface {
 }
 
 type Subscriber interface {
-	Subscribe(dispatch func(input *Input, data []byte) error, mux *server.Server) error
+	Subscribe(dispatch func(ctx context.Context, input *Input, data []byte) error, mux *server.Server) error
 	Input() *Input
 }
 
