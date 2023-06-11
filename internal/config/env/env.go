@@ -17,6 +17,8 @@ type Webui struct {
 	Enabled           bool
 	BasicAuthPwd      string
 	BasicAuthUsername string
+	AllowedOrigins    []string
+	AuthToken         string
 }
 
 func Load() (*Config, error) {
@@ -48,10 +50,28 @@ func loadWebui() (Webui, error) {
 		return Webui{}, fmt.Errorf("cannot parse WEBUI_ENABLED env var to boolean: %w", err)
 	}
 
+	if !enabled {
+		return Webui{}, nil
+	}
+
+	allowedOrigins := os.Getenv("WEBUI_SSE_ALLOWED_ORIGINS")
+	if allowedOrigins == "" {
+		return Webui{}, fmt.Errorf("WEBUI_SSE_ALLOWED_ORIGINS env var is required")
+	}
+	aos := strings.Split(allowedOrigins, ",")
+	if len(aos) == 0 {
+		return Webui{}, fmt.Errorf("WEBUI_SSE_ALLOWED_ORIGINS env var is required")
+	}
+
+	token := os.Getenv("WEBUI_SSE_TOKEN")
+	if token == "" {
+		return Webui{}, fmt.Errorf("WEBUI_SSE_TOKEN env var is required")
+	}
+
 	webui := Webui{
-		Enabled:           enabled,
-		BasicAuthPwd:      "",
-		BasicAuthUsername: "",
+		Enabled:        enabled,
+		AuthToken:      token,
+		AllowedOrigins: aos,
 	}
 
 	basicAuth := os.Getenv("WEBUI_BASIC_AUTH")

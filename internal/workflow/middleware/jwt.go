@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-type jwtConfig struct {
+type JWT struct {
 	Header           string  `json:"header"`
 	Secret           string  `json:"secret"`
 	Algorithm        string  `json:"algorithm"`
@@ -23,7 +23,7 @@ type field struct {
 	Required bool   `json:"required"`
 }
 
-func (config jwtConfig) validate() error {
+func (config JWT) validate() error {
 	if config.Header == "" {
 		return fmt.Errorf("jwt header is empty")
 	}
@@ -47,8 +47,8 @@ func (config jwtConfig) validate() error {
 	return nil
 }
 
-func unmarshalJWT(bytes []byte) (*jwtConfig, error) {
-	config := jwtConfig{}
+func unmarshalJWT(bytes []byte) (*JWT, error) {
+	config := JWT{}
 	err := json.Unmarshal(bytes, &config)
 	if err != nil {
 		return nil, fmt.Errorf("error unmarshalling params to type JWT got: %w ", err)
@@ -62,7 +62,7 @@ func unmarshalJWT(bytes []byte) (*jwtConfig, error) {
 	return &config, nil
 }
 
-func (config jwtConfig) Register(next http.Handler) http.Handler {
+func (config JWT) Register(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		authorizationHeader := r.Header.Get(config.Header)
 		if authorizationHeader == "" {

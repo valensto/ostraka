@@ -32,7 +32,7 @@ func New(config env.Webui, server *server.Server, workflows []*workflow.Workflow
 
 	logger.Get().Info().Msgf("webui running on %s:%s/webui/dashboard", webui.server.Host, webui.server.Port)
 
-	return webui, sse.WebUIPublisher().Publish(webui.events, server)
+	return webui, sse.WebUIPublisher(config).Publish(webui.events, server)
 }
 
 func (webui *Webui) Consume(event collector.Event) {
@@ -52,8 +52,6 @@ func (webui *Webui) basicAuth(handler http.Handler) http.HandlerFunc {
 			return
 		}
 
-		logger.Get().Debug().Msgf("basic auth credentials for user %s", u)
-		logger.Get().Debug().Msgf("basic auth credentials for pwd %s", p)
 		if !webui.isAuth(u, p) {
 			logger.Get().Error().Msgf("invalid basic auth credentials for user %s", u)
 			unauthorised(w)

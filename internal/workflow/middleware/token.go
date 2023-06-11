@@ -6,12 +6,12 @@ import (
 	"net/http"
 )
 
-type tokenConfig struct {
+type Token struct {
 	Token      string `json:"token"`
 	QueryParam string `json:"query_param"`
 }
 
-func (config tokenConfig) validate() error {
+func (config Token) validate() error {
 	if config.Token == "" {
 		return fmt.Errorf("token is empty")
 	}
@@ -23,8 +23,8 @@ func (config tokenConfig) validate() error {
 	return nil
 }
 
-func unmarshalToken(bytes []byte) (*tokenConfig, error) {
-	config := tokenConfig{}
+func unmarshalToken(bytes []byte) (*Token, error) {
+	config := Token{}
 	err := json.Unmarshal(bytes, &config)
 	if err != nil {
 		return nil, fmt.Errorf("error unmarshalling params to type JWT got: %w ", err)
@@ -38,7 +38,7 @@ func unmarshalToken(bytes []byte) (*tokenConfig, error) {
 	return &config, nil
 }
 
-func (config tokenConfig) Register(next http.Handler) http.Handler {
+func (config Token) Register(next http.Handler) http.Handler {
 	return http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
 			token := r.URL.Query().Get(config.QueryParam)

@@ -7,8 +7,8 @@ import (
 )
 
 const (
-	JWT   = "jwt"
-	Token = "token"
+	JWTType   = "jwt"
+	TokenType = "token"
 )
 
 type Auth struct {
@@ -27,10 +27,10 @@ func NewAuthentication(auth Auth) (Authenticator, error) {
 	}
 
 	switch auth.Type {
-	case JWT:
+	case JWTType:
 		return unmarshalJWT(b)
 
-	case Token:
+	case TokenType:
 		return unmarshalToken(b)
 
 	default:
