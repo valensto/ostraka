@@ -1,28 +1,61 @@
 package workflow
 
-import "fmt"
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"github.com/valensto/ostraka/internal/workflow/provider/mqtt"
+	"github.com/valensto/ostraka/internal/workflow/provider/webhook"
+)
+
+type Subscriber interface {
+	Subscribe(dispatch func(ctx context.Context, input *Input, data []byte) error) error
+}
 
 type Input struct {
 	Name    string
 	Source  string
-	Decoder Decoder
+	Decoder *Decoder
+
+	Subscriber Subscriber
 }
 
-func UnmarshallInput(name, source string, decoder Decoder, event *EventType) (*Input, error) {
+func UnmarshallInput(name, source string, decoder *Decoder, params any, opts Options) (*Input, error) {
 	if name == "" {
 		return nil, fmt.Errorf("input name is empty")
 	}
 
-	if source == "" {
-		return nil, fmt.Errorf("input source is empty")
+	subscriber, err := newSubscriber(source, params, opts)
+	if err != nil {
+		return nil, err
 	}
 
-	i := &Input{
-		Name:    name,
-		Source:  source,
-		Decoder: decoder,
+	return &Input{
+		Name:       name,
+		Source:     source,
+		Decoder:    decoder,
+		Subscriber: subscriber,
+	}, nil
+}
+
+func newSubscriber(src string, params any, opts Options) (Subscriber, error) {
+	b, err := json.Marshal(params)
+	if err != nil {
+		return nil, fmt.Errorf("error marshalling input params: %w", err)
 	}
 
-	i.Decoder.event = event
-	return i, nil
+	switch src {
+	case webhook.Webhook:
+		return webhook.NewSubscriber(b, opts.Server, opts.Middlewares)
+
+	case mqtt.MQTT:
+		return mqtt.NewSubscriber(b)
+
+	default:
+		return nil, fmt.Errorf("unknown subscriber type: %s", src)
+	}
+}
+
+func (i *Input) Subscribe(dispatch func(ctx context.Context, input *Input, data []byte) error) {
+	i.Subscriber.Subscribe(dispatch)
 }

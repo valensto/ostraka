@@ -139,12 +139,12 @@ func (si inputModel) toSubscriber(event *workflow.EventType, middlewares *middle
 		})
 	}
 
-	decoder, err := workflow.UnmarshallDecoder(si.Decoder.Format, mappers)
+	decoder, err := workflow.UnmarshallDecoder(si.Decoder.Format, mappers, event)
 	if err != nil {
 		return nil, fmt.Errorf("error converting decoder yaml: %w", err)
 	}
 
-	input, err := workflow.UnmarshallInput(si.Name, si.Source, *decoder, event)
+	input, err := workflow.UnmarshallInput(si.Name, si.Source, *decoder)
 	if err != nil {
 		return nil, fmt.Errorf("error converting input yaml: %w", err)
 	}

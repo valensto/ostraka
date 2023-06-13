@@ -2,7 +2,6 @@ package webhook
 
 import (
 	"context"
-	"fmt"
 	"github.com/valensto/ostraka/internal/logger"
 	"github.com/valensto/ostraka/internal/server"
 	"github.com/valensto/ostraka/internal/workflow"
@@ -14,21 +13,21 @@ import (
 const Webhook = "webhook"
 
 type Subscriber struct {
-	server        *server.Server
-	params        *Params
-	input         *workflow.Input
+	server *server.Server
+	params *Params
+
 	authenticator middleware.Authenticator
 	cors          *middleware.CORS
 }
 
-func NewSubscriber(input *workflow.Input, params []byte, middlewares *middleware.Middlewares) (*Subscriber, error) {
+func NewSubscriber(params []byte, server *server.Server, middlewares *middleware.Middlewares) (*Subscriber, error) {
 	p, err := unmarshalWebhook(params)
 	if err != nil {
 		return nil, err
 	}
 
 	s := Subscriber{
-		input:         input,
+		server:        server,
 		params:        p,
 		authenticator: nil,
 		cors:          nil,
@@ -51,16 +50,7 @@ func NewSubscriber(input *workflow.Input, params []byte, middlewares *middleware
 	return &s, nil
 }
 
-func (s *Subscriber) Input() *workflow.Input {
-	return s.input
-}
-
-func (s *Subscriber) Subscribe(dispatch func(ctx context.Context, input *workflow.Input, data []byte) error, mux *server.Server) error {
-	if mux == nil {
-		return fmt.Errorf("server is required to register subscriber of type webhook")
-	}
-
-	s.server = mux
+func (s *Subscriber) Subscribe(dispatch func(ctx context.Context, input *workflow.Input, data []byte) error) error {
 	endpoint := server.Endpoint{
 		Method:  server.POST,
 		Path:    s.params.Endpoint,
@@ -74,7 +64,7 @@ func (s *Subscriber) Subscribe(dispatch func(ctx context.Context, input *workflo
 		return err
 	}
 
-	logger.Get().Info().Msgf("subscriber %s of type webhook registered. Listening from endpoint %s", s.input.Name, s.params.Endpoint)
+	logger.Get().Info().Msgf("subscriber of type webhook registered. Listening from endpoint %s", s.params.Endpoint)
 	return nil
 }
 
@@ -92,7 +82,8 @@ func (s *Subscriber) endpoint(dispatch func(ctx context.Context, input *workflow
 			return
 		}
 
-		err = dispatch(r.Context(), s.input, bytes)
+		// TODO: add input
+		err = dispatch(r.Context(), nil, bytes)
 		if err != nil {
 			s.server.Respond(w, r, http.StatusBadRequest, response{
 				Message: "error dispatching event",

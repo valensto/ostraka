@@ -14,7 +14,6 @@ import (
 type dispatcher struct {
 	workflow  *workflow.Workflow
 	server    *server.Server
-	outputs   map[*workflow.Output]chan workflow.Event
 	collector *collector.Collector
 }
 
@@ -29,19 +28,10 @@ func Dispatch(config *env.Config, workflows []*workflow.Workflow) error {
 		d := &dispatcher{
 			workflow:  wf,
 			server:    s,
-			outputs:   make(map[*workflow.Output]chan workflow.Event, len(wf.Publishers)),
 			collector: collector.New(wf, consumer),
 		}
 
-		err := d.registerInputs()
-		if err != nil {
-			return err
-		}
-
-		err = d.registerOutputs()
-		if err != nil {
-			return err
-		}
+		d.registerInputs()
 	}
 
 	return s.Run()
@@ -56,16 +46,9 @@ func (d dispatcher) dispatch(ctx context.Context, input *workflow.Input, data []
 		return collect.Error()
 	}
 
-	for output, c := range d.outputs {
-		if !output.Condition.Match(event) {
-			collect.
-				WithError(fmt.Errorf("event does not match output %s condition", output.Name)).
-				WithLogLevel(zerolog.InfoLevel).Send()
-			continue
-		}
-
-		collect.WithOutput(output, event).Send()
-		c <- event
+	for _, output := range d.workflow.Outputs {
+		err := output.Publish(event)
+		collect.WithOutput(output, event).WithError(err).WithLogLevel(zerolog.InfoLevel).Send()
 	}
 
 	return nil

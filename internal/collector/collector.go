@@ -77,12 +77,16 @@ func (c *Collect) WithOutput(output *workflow.Output, event workflow.Event) *Col
 	c.event.To = source{
 		Provider: output.Destination,
 		Name:     output.Name,
-		Data:     string(event.Bytes()),
+		Data:     string(event.jsonEncode()),
 	}
 	return c
 }
 
 func (c *Collect) WithError(err error) *Collect {
+	if err == nil {
+		return c
+	}
+
 	c.err = err
 	c.event.Message = err.Error()
 	c.event.State = failed

@@ -11,7 +11,7 @@ package workflow
 	tests := []struct {
 		name       string
 		fields     fields
-		event      map[string]any
+		eventType      map[string]any
 		isMatching bool
 	}{
 		{
@@ -19,7 +19,7 @@ package workflow
 			fields: fields{
 				Condition: nil,
 			},
-			event: map[string]any{
+			eventType: map[string]any{
 				"status": "completed",
 			},
 			isMatching: true,
@@ -33,7 +33,7 @@ package workflow
 					value:    "completed",
 				},
 			},
-			event: map[string]any{
+			eventType: map[string]any{
 				"status": "completed",
 			},
 			isMatching: true,
@@ -47,7 +47,7 @@ package workflow
 					value:    true,
 				},
 			},
-			event: map[string]any{
+			eventType: map[string]any{
 				"boolean_field": true,
 			},
 			isMatching: true,
@@ -61,7 +61,7 @@ package workflow
 					value:    "completed",
 				},
 			},
-			event: map[string]any{
+			eventType: map[string]any{
 				"status": "failed",
 			},
 			isMatching: false,
@@ -85,7 +85,7 @@ package workflow
 					},
 				},
 			},
-			event: map[string]any{
+			eventType: map[string]any{
 				"status": "completed",
 				"paid":   true,
 			},
@@ -110,7 +110,7 @@ package workflow
 					},
 				},
 			},
-			event: map[string]any{
+			eventType: map[string]any{
 				"status": "failed",
 			},
 			isMatching: true,
@@ -134,7 +134,7 @@ package workflow
 					},
 				},
 			},
-			event: map[string]any{
+			eventType: map[string]any{
 				"status": "failed",
 			},
 			isMatching: false,
@@ -149,7 +149,7 @@ package workflow
 				Condition:   tt.fields.Condition,
 			}
 
-			match := o.Condition.Match(tt.event)
+			match := o.Condition.Match(tt.eventType)
 			require.Equal(t, tt.isMatching, match)
 		})
 	}

@@ -7,8 +7,6 @@ import (
 	"github.com/valensto/ostraka/internal/server"
 	"github.com/valensto/ostraka/internal/workflow/middleware"
 	"net/http"
-
-	"github.com/valensto/ostraka/internal/workflow"
 )
 
 const SSE = "sse"
@@ -16,7 +14,6 @@ const SSE = "sse"
 type Publisher struct {
 	server *server.Server
 
-	output        *workflow.Output
 	params        *Params
 	authenticator middleware.Authenticator
 	cors          *middleware.CORS
@@ -30,14 +27,14 @@ type Publisher struct {
 
 type client chan []byte
 
-func NewPublisher(output *workflow.Output, params []byte, middlewares *middleware.Middlewares) (*Publisher, error) {
+func NewPublisher(params []byte, s *server.Server, middlewares *middleware.Middlewares) (*Publisher, error) {
 	p, err := unmarshalParams(params)
 	if err != nil {
 		return nil, err
 	}
 
 	publisher := Publisher{
-		output:        output,
+		server:        s,
 		params:        p,
 		authenticator: nil,
 		cors:          nil,
@@ -63,65 +60,54 @@ func NewPublisher(output *workflow.Output, params []byte, middlewares *middlewar
 		}
 	}
 
+	endpoint := server.Endpoint{
+		Method:  server.GET,
+		Path:    publisher.params.Endpoint,
+		Cors:    publisher.cors,
+		Handler: publisher.endpoint(),
+		Auth:    publisher.authenticator,
+	}
+
+	err = s.AddSubRouter(endpoint)
+	if err != nil {
+		return nil, err
+	}
+
+	publisher.listenConn()
+	logger.Get().Info().Msgf("publisher of type SSE registered. Sending to endpoint %s", publisher.params.Endpoint)
 	return &publisher, nil
 }
 
-func (o *Publisher) Output() *workflow.Output {
-	return o.output
+func (p *Publisher) Publish(event []byte) {
+	msg := format(fmt.Sprintf("%d", p.eventCounter), "message", event)
+	p.eventCounter++
+	for cl := range p.clients {
+		cl <- msg.Bytes()
+	}
+
+	logger.Get().Info().Msgf("event published to endpoint %s", p.params.Endpoint)
 }
 
-func (o *Publisher) Publish(events <-chan workflow.Event, mux *server.Server) error {
-	if mux == nil {
-		return fmt.Errorf("server is required to register publisher of type SSE")
-	}
-
-	o.server = mux
-	endpoint := server.Endpoint{
-		Method:  server.GET,
-		Path:    o.params.Endpoint,
-		Cors:    o.cors,
-		Handler: o.endpoint(),
-		Auth:    o.authenticator,
-	}
-
-	o.listen(events)
-
-	err := o.server.AddSubRouter(endpoint)
-	if err != nil {
-		return err
-	}
-
-	logger.Get().Info().Msgf("publisher %s of type SSE registered. Sending to endpoint %s", o.output.Name, o.params.Endpoint)
-	return nil
-}
-
-func (o *Publisher) listen(events <-chan workflow.Event) {
+func (p *Publisher) listenConn() {
 	go func() {
 		for {
 			select {
-			case cl := <-o.connecting:
-				o.clients[cl] = true
+			case cl := <-p.connecting:
+				p.clients[cl] = true
 
-			case cl := <-o.disconnecting:
-				delete(o.clients, cl)
-
-			case event := <-events:
-				msg := format(fmt.Sprintf("%d", o.eventCounter), "message", event.Bytes())
-				o.eventCounter++
-				for cl := range o.clients {
-					cl <- msg.Bytes()
-				}
+			case cl := <-p.disconnecting:
+				delete(p.clients, cl)
 			}
 		}
 	}()
 }
 
-func (o *Publisher) endpoint() http.HandlerFunc {
+func (p *Publisher) endpoint() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		fl, ok := w.(http.Flusher)
 		if !ok {
 			logger.Get().Error().Msg("error flushing response writer: flushing not supported")
-			o.server.Respond(w, r, http.StatusNotImplemented, nil)
+			p.server.Respond(w, r, http.StatusNotImplemented, nil)
 			return
 		}
 
@@ -132,13 +118,13 @@ func (o *Publisher) endpoint() http.HandlerFunc {
 		h.Set("Connection", "keep-alive")
 		h.Set("Content-Type", "text/event-stream")
 
-		cl := make(client, o.bufSize)
-		o.connecting <- cl
+		cl := make(client, p.bufSize)
+		p.connecting <- cl
 
 		for {
 			select {
 			case <-r.Context().Done():
-				o.disconnecting <- cl
+				p.disconnecting <- cl
 				return
 
 			case event := <-cl:

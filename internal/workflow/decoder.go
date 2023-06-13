@@ -7,9 +7,9 @@ import (
 )
 
 type Decoder struct {
-	format  Format
-	mappers []Mapper
-	event   *EventType
+	format    Format
+	mappers   []Mapper
+	eventType *EventType
 }
 
 type Mapper struct {
@@ -17,15 +17,16 @@ type Mapper struct {
 	Target string
 }
 
-func UnmarshallDecoder(format string, mappers []Mapper) (*Decoder, error) {
+func UnmarshallDecoder(format string, mappers []Mapper, eventType *EventType) (*Decoder, error) {
 	f, err := getFormat(format)
 	if err != nil {
 		return nil, err
 	}
 
 	return &Decoder{
-		format:  f,
-		mappers: mappers,
+		format:    f,
+		mappers:   mappers,
+		eventType: eventType,
 	}, nil
 }
 
@@ -37,11 +38,11 @@ func (d Decoder) Decode(_ context.Context, data []byte) (Event, error) {
 	var source map[string]any
 	err := json.Unmarshal(data, &source)
 	if err != nil {
-		return nil, fmt.Errorf("error decoding event: %w", err)
+		return nil, fmt.Errorf("error decoding eventType: %w", err)
 	}
 
-	var event = make(Event, len(d.event.fields))
-	for _, field := range d.event.fields {
+	var event = make(Event, len(d.eventType.fields))
+	for _, field := range d.eventType.fields {
 		sf, ok := d.getSourceFieldByTarget(field.name)
 		if !ok && field.required {
 			return nil, fmt.Errorf("required field %s not found", field.name)

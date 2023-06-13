@@ -2,16 +2,13 @@ package mqtt
 
 import (
 	"github.com/valensto/ostraka/internal/logger"
-	"github.com/valensto/ostraka/internal/server"
-	"github.com/valensto/ostraka/internal/workflow"
 )
 
 type Publisher struct {
 	instance
-	output *workflow.Output
 }
 
-func NewPublisher(output *workflow.Output, params []byte) (*Publisher, error) {
+func NewPublisher(params []byte) (*Publisher, error) {
 	p, err := unmarshalParams(params)
 	if err != nil {
 		return nil, err
@@ -19,10 +16,8 @@ func NewPublisher(output *workflow.Output, params []byte) (*Publisher, error) {
 
 	publisher := Publisher{
 		instance: instance{
-			name:   output.Name,
 			params: p,
 		},
-		output: output,
 	}
 
 	err = publisher.instance.connect()
@@ -30,29 +25,17 @@ func NewPublisher(output *workflow.Output, params []byte) (*Publisher, error) {
 		return nil, err
 	}
 
+	logger.Get().Info().Msgf("publisher of type MQTT registered. Publishing to topic %s", publisher.params.Topic)
 	return &publisher, nil
 }
 
-func (p *Publisher) Output() *workflow.Output {
-	return p.output
-}
-
-func (p *Publisher) Publish(events <-chan workflow.Event, _ *server.Server) error {
+func (p *Publisher) Publish(event []byte) {
 	l := logger.Get()
-	l.Info().Msgf("publisher %s of type MQTT registered. Publishing to topic %s", p.name, p.instance.params.Topic)
+	token := p.client.Publish(p.instance.params.Topic, 1, false, event)
+	token.Wait()
+	if token.Error() != nil {
+		l.Error().Msgf("error publishing to topic: %s", p.instance.params.Topic)
+	}
 
-	go func() {
-		for {
-			select {
-			case event := <-events:
-				token := p.client.Publish(p.instance.params.Topic, 1, false, event.Bytes())
-				token.Wait()
-				if token.Error() != nil {
-					l.Error().Msgf("error publishing to topic: %s", p.instance.params.Topic)
-				}
-			}
-		}
-	}()
-
-	return nil
+	l.Info().Msgf("published message: %s to topic: %s", event, p.instance.params.Topic)
 }

@@ -14,7 +14,6 @@ const MQTT = "mqtt"
 type instance struct {
 	client    mqtt.Client
 	connected chan bool
-	name      string
 	params    *Params
 }
 
@@ -60,9 +59,9 @@ func (m *instance) keepalive() {
 				continue
 			}
 
-			logger.Get().Info().Msgf("%s send mqtt keep-alive", m.name)
+			logger.Get().Info().Msgf("send mqtt keep-alive to broker %s", m.params.Broker)
 			if token := m.client.Publish("ping_topic", 0, false, "ping"); token.Wait() && token.Error() != nil {
-				log.Warn().Msgf("%s mqtt keep-alive failed: %s", m.name, token.Error())
+				log.Warn().Msgf("mqtt keep-alive failed to broker %s with err: %s", m.params.Broker, token.Error())
 			}
 			break
 		}

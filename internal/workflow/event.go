@@ -7,12 +7,12 @@ import (
 
 type Event map[string]any
 
-func (e Event) Bytes() []byte {
+func (e Event) jsonEncode() ([]byte, error) {
 	b, ok := json.Marshal(e)
 	if ok != nil {
-		return nil
+		return nil, fmt.Errorf("error marshalling eventType to json: %w", ok)
 	}
-	return b
+	return b, nil
 }
 
 type EventType struct {
@@ -28,11 +28,11 @@ type Field struct {
 
 func UnmarshallEventType(format string, fields ...Field) (*EventType, error) {
 	if format == "" {
-		return nil, fmt.Errorf("event type is empty")
+		return nil, fmt.Errorf("eventType type is empty")
 	}
 
 	if len(fields) == 0 {
-		return nil, fmt.Errorf("event has no fields")
+		return nil, fmt.Errorf("eventType has no fields")
 	}
 
 	return &EventType{

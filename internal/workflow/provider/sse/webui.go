@@ -2,16 +2,11 @@ package sse
 
 import (
 	"github.com/valensto/ostraka/internal/config/env"
-	"github.com/valensto/ostraka/internal/workflow"
 	"github.com/valensto/ostraka/internal/workflow/middleware"
 )
 
 func WebUIPublisher(config env.Webui) *Publisher {
 	return &Publisher{
-		output: &workflow.Output{
-			Name:        "webui",
-			Destination: SSE,
-		},
 		params: &Params{
 			Endpoint: "/webui/consume",
 		},
