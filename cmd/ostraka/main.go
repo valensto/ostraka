@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-
 	"github.com/valensto/ostraka/internal/config/env"
 	"github.com/valensto/ostraka/internal/config/static/local"
 	"github.com/valensto/ostraka/internal/dispatcher"

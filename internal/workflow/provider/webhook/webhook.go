@@ -35,14 +35,14 @@ func NewSubscriber(input *workflow.Input, params []byte, middlewares *middleware
 	}
 
 	if p.Auth != "" {
-		s.authenticator, err = middlewares.HTTP.GetAuthenticator(p.Auth)
+		s.authenticator, err = middlewares.HTTP.Authenticator(p.Auth)
 		if err != nil {
 			return nil, err
 		}
 	}
 
 	if p.CORS != "" {
-		s.cors, err = middlewares.HTTP.GetCORS(p.CORS)
+		s.cors, err = middlewares.HTTP.Cors(p.CORS)
 		if err != nil {
 			return nil, err
 		}

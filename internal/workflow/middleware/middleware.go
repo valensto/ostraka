@@ -13,7 +13,7 @@ type HTTP struct {
 	CORS           map[string]CORS
 }
 
-func (w HTTP) GetAuthenticator(name string) (Authenticator, error) {
+func (w HTTP) Authenticator(name string) (Authenticator, error) {
 	if a, ok := w.Authenticators[name]; ok {
 		return a, nil
 	}
@@ -21,7 +21,7 @@ func (w HTTP) GetAuthenticator(name string) (Authenticator, error) {
 	return nil, fmt.Errorf("unknown authenticator: %s", name)
 }
 
-func (w HTTP) GetCORS(name string) (*CORS, error) {
+func (w HTTP) Cors(name string) (*CORS, error) {
 	if c, ok := w.CORS[name]; ok {
 		return &c, nil
 	}
