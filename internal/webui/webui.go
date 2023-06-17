@@ -3,6 +3,7 @@ package webui
 import (
 	"github.com/valensto/ostraka/internal/collector"
 	"github.com/valensto/ostraka/internal/config/env"
+	"github.com/valensto/ostraka/internal/event"
 	ostraHTTP "github.com/valensto/ostraka/internal/http"
 	"github.com/valensto/ostraka/internal/logger"
 	"github.com/valensto/ostraka/internal/workflow"
@@ -14,22 +15,22 @@ import (
 
 type Webui struct {
 	server *ostraHTTP.Server
-	events chan workflow.Event
+	events chan event.Payload
 	config env.Webui
 }
 
 func New(config env.Webui, server *ostraHTTP.Server, workflows []*workflow.Workflow) (*Webui, error) {
 	webui := &Webui{
 		server: server,
-		events: make(chan workflow.Event),
+		events: make(chan event.Payload),
 		config: config,
 	}
 
-	server.Router.Handle("/assets/*", http.StripPrefix("/assets/", http.FileServer(http.Dir("views/dist/assets"))))
+	server.Router.Handle("/assets/*", http.StripPrefix("/assets/", http.FileServer(http.Dir("ui/dist/assets"))))
 	server.Router.Get("/webui/dashboard", webui.basicAuth(webui.dashboard()))
 	server.Router.Get("/webui/workflows", webui.workflows(workflows))
 
-	logger.Get().Info().Msgf("views running on %s:%s/views/dashboard", webui.server.Host, webui.server.Port)
+	logger.Get().Info().Msgf("views running on %s:%s/ui/dashboard", webui.server.Host, webui.server.Port)
 
 	/*return webui, sse.WebUIPublisher(config).Publish(webui.events, server)*/
 	return webui, nil
@@ -88,7 +89,7 @@ func (webui *Webui) workflows(workflows []*workflow.Workflow) http.HandlerFunc {
 
 func (webui *Webui) dashboard() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		tmpl := template.Must(template.ParseFiles("views/dist/index.html"))
+		tmpl := template.Must(template.ParseFiles("ui/dist/index.html"))
 		err := tmpl.Execute(w, nil)
 		if err != nil {
 			webui.server.Respond(w, r, http.StatusInternalServerError, nil)

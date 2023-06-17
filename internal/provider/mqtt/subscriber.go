@@ -45,7 +45,6 @@ func (s *Subscriber) Subscribe(events chan<- []byte) error {
 func (s *Subscriber) eventPubHandler(events chan<- []byte) mqtt.MessageHandler {
 	return func(client mqtt.Client, msg mqtt.Message) {
 		logger.Get().Info().Msgf("Received message: %s from topic: %s", msg.Payload(), msg.Topic())
-
 		events <- msg.Payload()
 	}
 }

@@ -1,66 +1,39 @@
 package workflow
 
 import (
-	"encoding/json"
 	"fmt"
-	mqtt2 "github.com/valensto/ostraka/internal/provider/mqtt"
-	"github.com/valensto/ostraka/internal/provider/sse"
+	"github.com/valensto/ostraka/internal/event"
+	"github.com/valensto/ostraka/internal/provider"
 )
 
-type Publisher interface {
-	Publish(events []byte)
-}
-
 type Output struct {
-	Name        string
-	Destination string
-	Condition   *Condition
-	Encoder     *Encoder
+	Name      string
+	Condition *Condition
+	Encoder   *event.Encoder
 
-	Publisher Publisher
+	Publisher provider.Publisher
 }
 
-func UnmarshallOutput(name, destination string, condition *Condition, params any, opts Options) (*Output, error) {
+func UnmarshallOutput(name, dst string, condition *Condition, encoder *event.Encoder, params any, opts provider.Options) (*Output, error) {
 	if name == "" {
 		return nil, fmt.Errorf("output name is empty")
 	}
 
-	publisher, err := newPublisher(destination, params, opts)
+	publisher, err := provider.NewPublisher(dst, params, opts)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error creating publisher for output %s got: %w", name, err)
 	}
 
 	return &Output{
-		Name:        name,
-		Destination: destination,
-		Condition:   condition,
-		Encoder: &Encoder{
-			format: JSON,
-		},
+		Name:      name,
+		Condition: condition,
+		Encoder:   encoder,
 
 		Publisher: publisher,
 	}, nil
 }
 
-func newPublisher(dst string, params any, opts Options) (Publisher, error) {
-	b, err := json.Marshal(params)
-	if err != nil {
-		return nil, fmt.Errorf("error marshalling input params: %w", err)
-	}
-
-	switch dst {
-	case sse.SSE:
-		return sse.NewPublisher(b, opts.Server, opts.Middlewares)
-
-	case mqtt2.MQTT:
-		return mqtt2.NewPublisher(b)
-
-	default:
-		return nil, fmt.Errorf("unknown publisher type: %s", dst)
-	}
-}
-
-func (o *Output) Publish(event Event) error {
+func (o *Output) Publish(event event.Payload) error {
 	if !o.Condition.Match(event) {
 		return fmt.Errorf("event does not match output %s condition", o.Name)
 	}

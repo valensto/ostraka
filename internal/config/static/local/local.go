@@ -2,37 +2,49 @@ package local
 
 import (
 	"fmt"
-	"github.com/valensto/ostraka/internal/config/static"
+	"github.com/go-playground/validator/v10"
+	"github.com/valensto/ostraka/internal/config"
 	"github.com/valensto/ostraka/internal/logger"
-	"github.com/valensto/ostraka/internal/workflow"
+	"gopkg.in/yaml.v3"
 	"io"
 	"os"
 	"path/filepath"
 )
 
-func Extract(source string) ([]*workflow.Workflow, error) {
+func Extract(source string) ([]config.Workflow, error) {
 	dir, err := os.ReadDir(source)
 	if err != nil {
 		return nil, fmt.Errorf("error reading resources directory: %w", err)
 	}
 
-	workflows := make(map[string][]byte)
+	workflows := make([]config.Workflow, 0, len(dir))
 	for _, file := range dir {
-		ext := filepath.Ext(file.Name())
+		fn := file.Name()
+
+		ext := filepath.Ext(fn)
 		if ext != ".yaml" && ext != ".yml" {
-			logger.Get().Warn().Msgf(`file (%s) be skipped. No matching with authorized extensions (yaml | yml) found`, file.Name())
+			logger.Get().Warn().Msgf(`file (%s) be skipped. No matching with authorized extensions (yaml | yml) found`, fn)
 			continue
 		}
 
-		wf, err := extractBytes(filepath.Join(source, file.Name()))
+		wf, err := extractBytes(filepath.Join(source, fn))
 		if err != nil {
 			return nil, fmt.Errorf("error extracting workflow: %w", err)
 		}
 
-		workflows[file.Name()] = wf
+		var cw config.Workflow
+		err = yaml.Unmarshal(wf, &cw)
+		if err != nil {
+			return nil, fmt.Errorf("error parsing YAML wf: %w in file %s", err, fn)
+		}
+
+		err = validator.New().Struct(cw)
+		if err != nil {
+			return nil, fmt.Errorf("error: validating wf: %w in file %s", err, fn)
+		}
 	}
 
-	return static.BuildWorkflows(workflows)
+	return workflows, nil
 }
 
 func extractBytes(filename string) ([]byte, error) {

@@ -29,13 +29,13 @@ func NewPublisher(params []byte) (*Publisher, error) {
 	return &publisher, nil
 }
 
-func (p *Publisher) Publish(event []byte) {
+func (p *Publisher) Publish(b []byte) {
 	l := logger.Get()
-	token := p.client.Publish(p.instance.params.Topic, 1, false, event)
+	token := p.client.Publish(p.instance.params.Topic, 1, false, b)
 	token.Wait()
 	if token.Error() != nil {
 		l.Error().Msgf("error publishing to topic: %s", p.instance.params.Topic)
 	}
 
-	l.Info().Msgf("published message: %s to topic: %s", event, p.instance.params.Topic)
+	l.Info().Msgf("published message to topic: %s", p.instance.params.Topic)
 }

@@ -1,13 +1,13 @@
-package workflow
+package event
 
 import (
 	"encoding/json"
 	"fmt"
 )
 
-type Event map[string]any
+type Payload map[string]any
 
-func (e Event) jsonEncode() ([]byte, error) {
+func (e Payload) JSONEncode() ([]byte, error) {
 	b, ok := json.Marshal(e)
 	if ok != nil {
 		return nil, fmt.Errorf("error marshalling eventType to json: %w", ok)
@@ -15,18 +15,18 @@ func (e Event) jsonEncode() ([]byte, error) {
 	return b, nil
 }
 
-type EventType struct {
-	format string
-	fields []Field
+type Type struct {
+	Format string
+	Fields []Field
 }
 
 type Field struct {
-	name     string
-	dataType string
-	required bool
+	Name     string
+	DataType string
+	Required bool
 }
 
-func UnmarshallEventType(format string, fields ...Field) (*EventType, error) {
+func UnmarshallType(format string, fields ...Field) (*Type, error) {
 	if format == "" {
 		return nil, fmt.Errorf("eventType type is empty")
 	}
@@ -35,9 +35,9 @@ func UnmarshallEventType(format string, fields ...Field) (*EventType, error) {
 		return nil, fmt.Errorf("eventType has no fields")
 	}
 
-	return &EventType{
-		format: format,
-		fields: fields,
+	return &Type{
+		Format: format,
+		Fields: fields,
 	}, nil
 }
 
@@ -51,8 +51,8 @@ func UnmarshallField(name, dataType string, required bool) (Field, error) {
 	}
 
 	return Field{
-		name:     name,
-		dataType: dataType,
-		required: required,
+		Name:     name,
+		DataType: dataType,
+		Required: required,
 	}, nil
 }

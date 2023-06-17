@@ -3,6 +3,7 @@ package static
 import (
 	"fmt"
 	"github.com/go-playground/validator/v10"
+	"github.com/valensto/ostraka/internal/event"
 	middleware2 "github.com/valensto/ostraka/internal/middleware"
 	"github.com/valensto/ostraka/internal/workflow"
 	"github.com/valensto/ostraka/internal/workflow/provider"
@@ -64,7 +65,7 @@ func (sw workflowModel) toWorkflow() (*workflow.Workflow, error) {
 	return workflow.New(sw.Name, subscribers, publishers)
 }
 
-func (ms middlewaresModel) toMiddleware() (*middleware2.Middlewares, error) {
+func (ms middlewares) toMiddleware() (*middleware2.Middlewares, error) {
 	middlewares := &middleware2.Middlewares{
 		HTTP: middleware2.HTTP{
 			CORS:           make(map[string]middleware2.CORS, len(ms.CORS)),
@@ -102,7 +103,7 @@ func (ms middlewaresModel) toMiddleware() (*middleware2.Middlewares, error) {
 	return middlewares, nil
 }
 
-func (sc conditionModel) toCondition() (*workflow.Condition, error) {
+func (sc condition) toCondition() (*workflow.Condition, error) {
 	cs := make([]*workflow.Condition, len(sc.Conditions))
 	for i, c := range sc.Conditions {
 		nc, err := c.toCondition()
@@ -115,10 +116,10 @@ func (sc conditionModel) toCondition() (*workflow.Condition, error) {
 	return workflow.NewCondition(sc.Field, sc.Operator, sc.Value, cs...)
 }
 
-func (se eventTypeModel) toEvent() (*workflow.EventType, error) {
-	fields := make([]workflow.Field, len(se.Fields))
+func (se event) toEvent() (*event.Type, error) {
+	fields := make([]event.Field, len(se.Fields))
 	for i, sf := range se.Fields {
-		f, err := workflow.UnmarshallField(sf.Name, sf.DataType, sf.Required)
+		f, err := event.UnmarshallField(sf.Name, sf.DataType, sf.Required)
 		if err != nil {
 			return nil, fmt.Errorf("error converting field yaml: %w", err)
 		}
@@ -126,19 +127,19 @@ func (se eventTypeModel) toEvent() (*workflow.EventType, error) {
 		fields[i] = f
 	}
 
-	return workflow.UnmarshallEventType(se.Format, fields...)
+	return event.UnmarshallType(se.Format, fields...)
 }
 
-func (si inputModel) toSubscriber(event *workflow.EventType, middlewares *middleware2.Middlewares) (workflow.Subscriber, error) {
-	mappers := make([]workflow.Mapper, len(si.Decoder.Mappers))
+func (si input) toSubscriber(event *event.Type, middlewares *middleware2.Middlewares) (workflow.Subscriber, error) {
+	mappers := make([]event.Mapper, len(si.Decoder.Mappers))
 	for _, sm := range si.Decoder.Mappers {
-		mappers = append(mappers, workflow.Mapper{
+		mappers = append(mappers, event.Mapper{
 			Source: sm.Source,
 			Target: sm.Target,
 		})
 	}
 
-	decoder, err := workflow.UnmarshallDecoder(si.Decoder.Format, mappers, event)
+	decoder, err := event.UnmarshallDecoder(si.Decoder.Format, mappers, event)
 	if err != nil {
 		return nil, fmt.Errorf("error converting decoder yaml: %w", err)
 	}
@@ -151,7 +152,7 @@ func (si inputModel) toSubscriber(event *workflow.EventType, middlewares *middle
 	return provider.NewSubscriber(input, si.Params, middlewares)
 }
 
-func (so outputModel) toPublisher(middlewares *middleware2.Middlewares) (workflow.Publisher, error) {
+func (so output) toPublisher(middlewares *middleware2.Middlewares) (workflow.Publisher, error) {
 	var condition *workflow.Condition
 	if so.Condition != nil {
 		c, err := so.Condition.toCondition()

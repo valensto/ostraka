@@ -78,8 +78,8 @@ func NewPublisher(params []byte, s *http.Server, middlewares *middleware.Middlew
 	return &publisher, nil
 }
 
-func (p *Publisher) Publish(event []byte) {
-	msg := format(fmt.Sprintf("%d", p.eventCounter), "message", event)
+func (p *Publisher) Publish(b []byte) {
+	msg := format(fmt.Sprintf("%d", p.eventCounter), "message", b)
 	p.eventCounter++
 	for cl := range p.clients {
 		cl <- msg.Bytes()
@@ -127,8 +127,8 @@ func (p *Publisher) endpoint() stdHTTP.HandlerFunc {
 				p.disconnecting <- cl
 				return
 
-			case event := <-cl:
-				_, _ = w.Write(event)
+			case e := <-cl:
+				_, _ = w.Write(e)
 				fl.Flush()
 			}
 		}

@@ -9,7 +9,7 @@ services:
     container_name: ostraka-core
     volumes:
       - .:/ostraka
-      - /ostraka/views
+      - /ostraka/ui
     working_dir: /ostraka
     ports:
       - "${PORT}:4000"

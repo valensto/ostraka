@@ -1,7 +1,6 @@
 package webhook
 
 import (
-	"context"
 	"github.com/valensto/ostraka/internal/http"
 	"github.com/valensto/ostraka/internal/logger"
 	"github.com/valensto/ostraka/internal/middleware"
@@ -49,10 +48,7 @@ func NewSubscriber(params []byte, server *http.Server, middlewares *middleware.M
 	return &s, nil
 }
 
-func (s *Subscriber) Subscribe(events chan<- struct {
-	data []byte
-	ctx  context.Context
-}) error {
+func (s *Subscriber) Subscribe(events chan<- []byte) error {
 	endpoint := http.Endpoint{
 		Method:  http.POST,
 		Path:    s.params.Endpoint,
@@ -70,16 +66,13 @@ func (s *Subscriber) Subscribe(events chan<- struct {
 	return nil
 }
 
-func (s *Subscriber) endpoint(events chan<- struct {
-	data []byte
-	ctx  context.Context
-}) stdHTTP.HandlerFunc {
+func (s *Subscriber) endpoint(events chan<- []byte) stdHTTP.HandlerFunc {
 	type response struct {
 		Message string `json:"message"`
 	}
 
 	return func(w stdHTTP.ResponseWriter, r *stdHTTP.Request) {
-		bytes, err := io.ReadAll(r.Body)
+		b, err := io.ReadAll(r.Body)
 		if err != nil {
 			s.server.Respond(w, r, stdHTTP.StatusBadRequest, response{
 				Message: "error reading request body",
@@ -87,14 +80,7 @@ func (s *Subscriber) endpoint(events chan<- struct {
 			return
 		}
 
-		events <- struct {
-			data []byte
-			ctx  context.Context
-		}{
-			data: bytes,
-			ctx:  r.Context(),
-		}
-
+		events <- b
 		s.server.Respond(w, r, stdHTTP.StatusOK, response{
 			Message: "event dispatched",
 		})

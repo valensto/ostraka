@@ -1,61 +1,47 @@
 package workflow
 
 import (
-	"context"
-	"encoding/json"
 	"fmt"
-	mqtt2 "github.com/valensto/ostraka/internal/provider/mqtt"
-	"github.com/valensto/ostraka/internal/provider/webhook"
+	"github.com/valensto/ostraka/internal/event"
+	"github.com/valensto/ostraka/internal/provider"
 )
-
-type Subscriber interface {
-	Subscribe(dispatch func(ctx context.Context, input *Input, data []byte) error) error
-}
 
 type Input struct {
 	Name    string
-	Source  string
-	Decoder *Decoder
+	Decoder *event.Decoder
 
-	Subscriber Subscriber
+	Subscriber provider.Subscriber
+	queue      chan []byte
 }
 
-func UnmarshallInput(name, source string, decoder *Decoder, params any, opts Options) (*Input, error) {
+func UnmarshallInput(name, source string, decoder *event.Decoder, params any, opts provider.Options) (*Input, error) {
 	if name == "" {
 		return nil, fmt.Errorf("input name is empty")
 	}
 
-	subscriber, err := newSubscriber(source, params, opts)
+	subscriber, err := provider.NewSubscriber(source, params, opts)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error creating subscriber for output %s got: %w", name, err)
 	}
 
 	return &Input{
-		Name:       name,
-		Source:     source,
-		Decoder:    decoder,
+		Name:    name,
+		Decoder: decoder,
+
 		Subscriber: subscriber,
+		queue:      make(chan []byte),
 	}, nil
 }
 
-func newSubscriber(src string, params any, opts Options) (Subscriber, error) {
-	b, err := json.Marshal(params)
-	if err != nil {
-		return nil, fmt.Errorf("error marshalling input params: %w", err)
-	}
+func (i *Input) listen(dispatch func(from *Input, data []byte)) error {
+	go func() {
+		for {
+			select {
+			case b := <-i.queue:
+				dispatch(i, b)
+			}
+		}
+	}()
 
-	switch src {
-	case webhook.Webhook:
-		return webhook.NewSubscriber(b, opts.Server, opts.Middlewares)
-
-	case mqtt2.MQTT:
-		return mqtt2.NewSubscriber(b)
-
-	default:
-		return nil, fmt.Errorf("unknown subscriber type: %s", src)
-	}
-}
-
-func (i *Input) Subscribe(dispatch func(ctx context.Context, input *Input, data []byte) error) {
-	i.Subscriber.Subscribe(dispatch)
+	return i.Subscriber.Subscribe(i.queue)
 }

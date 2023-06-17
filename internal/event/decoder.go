@@ -1,7 +1,6 @@
-package workflow
+package event
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 )
@@ -9,7 +8,7 @@ import (
 type Decoder struct {
 	format    Format
 	mappers   []Mapper
-	eventType *EventType
+	eventType Type
 }
 
 type Mapper struct {
@@ -17,7 +16,7 @@ type Mapper struct {
 	Target string
 }
 
-func UnmarshallDecoder(format string, mappers []Mapper, eventType *EventType) (*Decoder, error) {
+func UnmarshallDecoder(format string, mappers []Mapper, eventType Type) (*Decoder, error) {
 	f, err := getFormat(format)
 	if err != nil {
 		return nil, err
@@ -30,7 +29,7 @@ func UnmarshallDecoder(format string, mappers []Mapper, eventType *EventType) (*
 	}, nil
 }
 
-func (d Decoder) Decode(_ context.Context, data []byte) (Event, error) {
+func (d Decoder) Decode(data []byte) (Payload, error) {
 	if d.format != JSON {
 		return nil, fmt.Errorf("unknown decoder type: %s", d.format)
 	}
@@ -41,22 +40,22 @@ func (d Decoder) Decode(_ context.Context, data []byte) (Event, error) {
 		return nil, fmt.Errorf("error decoding eventType: %w", err)
 	}
 
-	var event = make(Event, len(d.eventType.fields))
-	for _, field := range d.eventType.fields {
-		sf, ok := d.getSourceFieldByTarget(field.name)
-		if !ok && field.required {
-			return nil, fmt.Errorf("required field %s not found", field.name)
+	var e = make(Payload, len(d.eventType.Fields))
+	for _, field := range d.eventType.Fields {
+		sf, ok := d.getSourceFieldByTarget(field.Name)
+		if !ok && field.Required {
+			return nil, fmt.Errorf("required field %s not found", field.Name)
 		}
 
 		v, ok := source[sf]
-		if !ok && field.required {
-			return nil, fmt.Errorf("required field %s not found", field.name)
+		if !ok && field.Required {
+			return nil, fmt.Errorf("required field %s not found", field.Name)
 		}
 
-		event[field.name] = v
+		e[field.Name] = v
 	}
 
-	return event, nil
+	return e, nil
 }
 
 func (d Decoder) getSourceFieldByTarget(target string) (source string, found bool) {

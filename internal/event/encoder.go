@@ -1,15 +1,17 @@
-package workflow
+package event
 
-import "fmt"
+import (
+	"fmt"
+)
 
 type Encoder struct {
 	format Format
 }
 
-func (e Encoder) Encode(event Event) ([]byte, error) {
+func (e Encoder) Encode(payload Payload) ([]byte, error) {
 	switch e.format {
 	case JSON:
-		return event.jsonEncode()
+		return payload.JSONEncode()
 	default:
 		return nil, fmt.Errorf("unknown encoder type: %s", e.format)
 	}

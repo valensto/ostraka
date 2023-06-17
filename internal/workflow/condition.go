@@ -1,6 +1,9 @@
 package workflow
 
-import "fmt"
+import (
+	"fmt"
+	"github.com/valensto/ostraka/internal/event"
+)
 
 type operator string
 
@@ -91,7 +94,7 @@ func NewCondition(field, operator string, value any, conditions ...*Condition) (
 	}, nil
 }
 
-func (c *Condition) Match(source map[string]any) bool {
+func (c *Condition) Match(event event.Payload) bool {
 	if c == nil {
 		return true
 	}
@@ -100,7 +103,7 @@ func (c *Condition) Match(source map[string]any) bool {
 		switch c.operator {
 		case And:
 			for _, subCondition := range c.conditions {
-				if !subCondition.Match(source) {
+				if !subCondition.Match(event) {
 					return false
 				}
 			}
@@ -108,7 +111,7 @@ func (c *Condition) Match(source map[string]any) bool {
 
 		case Or:
 			for _, subCondition := range c.conditions {
-				if subCondition.Match(source) {
+				if subCondition.Match(event) {
 					return true
 				}
 			}
@@ -119,11 +122,11 @@ func (c *Condition) Match(source map[string]any) bool {
 		}
 	}
 
-	return c.matchOperator(source)
+	return c.matchOperator(event)
 }
 
-func (c *Condition) matchOperator(source map[string]any) bool {
-	v, ok := source[c.field]
+func (c *Condition) matchOperator(event event.Payload) bool {
+	v, ok := event[c.field]
 	if !ok {
 		return false
 	}

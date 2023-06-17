@@ -3,40 +3,61 @@ package workflow
 import (
 	"fmt"
 	"github.com/gosimple/slug"
-	"github.com/valensto/ostraka/internal/http"
-	"github.com/valensto/ostraka/internal/middleware"
 )
 
 type Workflow struct {
-	Name    string
-	Slug    string
+	Name string
+	Slug string
+
 	Inputs  []*Input
 	Outputs []*Output
+
+	consumers []consumer
 }
 
-type Options struct {
-	Middlewares *middleware.Middlewares
-	Server      *http.Server
-}
-
-func New(name string, inputs []*Input, outputs []*Output) (*Workflow, error) {
+func New(name string, inputs []*Input, output []*Output, consumers ...consumer) (*Workflow, error) {
 	if name == "" {
 		return nil, fmt.Errorf("workflow name is empty")
 	}
 
-	return &Workflow{
-		Name:    name,
-		Slug:    slug.Make(name),
-		Inputs:  inputs,
-		Outputs: outputs,
-	}, nil
-}
+	wf := Workflow{
+		Name: name,
+		Slug: slug.Make(name),
 
-func (w *Workflow) Dispatch(consumers ...consumer) {
-	c := &Collector{
+		Inputs:  inputs,
+		Outputs: output,
+
 		consumers: consumers,
-		queue:     make(chan Event),
 	}
 
-	c.broadcast()
+	return &wf, nil
+}
+
+func (wf *Workflow) Listen() error {
+	for _, input := range wf.Inputs {
+		err := input.listen(wf.dispatch)
+		if err != nil {
+			return fmt.Errorf("error subscribing input %s got: %w", input.Name, err)
+		}
+	}
+
+	return nil
+}
+
+func (wf *Workflow) dispatch(from *Input, data []byte) {
+	c := wf.newCollector(from, data)
+	defer c.dump()
+
+	e, err := from.Decoder.Decode(data)
+	if err != nil {
+		c.dump()
+		return
+	}
+
+	for _, output := range wf.Outputs {
+		err := output.Publish(e)
+		if err != nil {
+			c.addError(err)
+		}
+	}
 }
