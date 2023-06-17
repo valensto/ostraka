@@ -2,19 +2,19 @@ package sse
 
 import (
 	"github.com/valensto/ostraka/internal/config/env"
-	"github.com/valensto/ostraka/internal/workflow/middleware"
+	middleware2 "github.com/valensto/ostraka/internal/middleware"
 )
 
 func WebUIPublisher(config env.Webui) *Publisher {
 	return &Publisher{
 		params: &Params{
-			Endpoint: "/webui/consume",
+			Endpoint: "/views/consume",
 		},
-		authenticator: &middleware.Token{
+		authenticator: &middleware2.Token{
 			Token:      config.AuthToken,
 			QueryParam: "token",
 		},
-		cors: &middleware.CORS{
+		cors: &middleware2.CORS{
 			AllowedOrigins:   config.AllowedOrigins,
 			AllowedMethods:   []string{"GET"},
 			AllowedHeaders:   nil,

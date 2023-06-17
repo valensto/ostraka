@@ -3,11 +3,10 @@ package static
 import (
 	"fmt"
 	"github.com/go-playground/validator/v10"
-	"github.com/valensto/ostraka/internal/workflow/middleware"
+	middleware2 "github.com/valensto/ostraka/internal/middleware"
+	"github.com/valensto/ostraka/internal/workflow"
 	"github.com/valensto/ostraka/internal/workflow/provider"
 	"gopkg.in/yaml.v3"
-
-	"github.com/valensto/ostraka/internal/workflow"
 )
 
 func BuildWorkflows(contentFile ContentFile) ([]*workflow.Workflow, error) {
@@ -65,16 +64,16 @@ func (sw workflowModel) toWorkflow() (*workflow.Workflow, error) {
 	return workflow.New(sw.Name, subscribers, publishers)
 }
 
-func (ms middlewaresModel) toMiddleware() (*middleware.Middlewares, error) {
-	middlewares := &middleware.Middlewares{
-		HTTP: middleware.HTTP{
-			CORS:           make(map[string]middleware.CORS, len(ms.CORS)),
-			Authenticators: make(map[string]middleware.Authenticator, len(ms.Auth)),
+func (ms middlewaresModel) toMiddleware() (*middleware2.Middlewares, error) {
+	middlewares := &middleware2.Middlewares{
+		HTTP: middleware2.HTTP{
+			CORS:           make(map[string]middleware2.CORS, len(ms.CORS)),
+			Authenticators: make(map[string]middleware2.Authenticator, len(ms.Auth)),
 		},
 	}
 
 	for _, ma := range ms.Auth {
-		a, err := middleware.NewAuthentication(middleware.Auth{
+		a, err := middleware2.NewAuthentication(middleware2.Auth{
 			Type:   ma.Type,
 			Params: ma.Params,
 		})
@@ -86,7 +85,7 @@ func (ms middlewaresModel) toMiddleware() (*middleware.Middlewares, error) {
 	}
 
 	for _, mc := range ms.CORS {
-		c, err := middleware.NewCORS(
+		c, err := middleware2.NewCORS(
 			mc.AllowedOrigins,
 			mc.AllowedMethods,
 			mc.AllowedHeaders,
@@ -130,7 +129,7 @@ func (se eventTypeModel) toEvent() (*workflow.EventType, error) {
 	return workflow.UnmarshallEventType(se.Format, fields...)
 }
 
-func (si inputModel) toSubscriber(event *workflow.EventType, middlewares *middleware.Middlewares) (workflow.Subscriber, error) {
+func (si inputModel) toSubscriber(event *workflow.EventType, middlewares *middleware2.Middlewares) (workflow.Subscriber, error) {
 	mappers := make([]workflow.Mapper, len(si.Decoder.Mappers))
 	for _, sm := range si.Decoder.Mappers {
 		mappers = append(mappers, workflow.Mapper{
@@ -152,7 +151,7 @@ func (si inputModel) toSubscriber(event *workflow.EventType, middlewares *middle
 	return provider.NewSubscriber(input, si.Params, middlewares)
 }
 
-func (so outputModel) toPublisher(middlewares *middleware.Middlewares) (workflow.Publisher, error) {
+func (so outputModel) toPublisher(middlewares *middleware2.Middlewares) (workflow.Publisher, error) {
 	var condition *workflow.Condition
 	if so.Condition != nil {
 		c, err := so.Condition.toCondition()

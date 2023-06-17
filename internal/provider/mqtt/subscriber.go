@@ -1,11 +1,9 @@
 package mqtt
 
 import (
-	"context"
 	"fmt"
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/valensto/ostraka/internal/logger"
-	"github.com/valensto/ostraka/internal/workflow"
 )
 
 type Subscriber struct {
@@ -32,8 +30,8 @@ func NewSubscriber(params []byte) (*Subscriber, error) {
 	return &subscriber, nil
 }
 
-func (s *Subscriber) Subscribe(dispatch func(ctx context.Context, input *workflow.Input, data []byte) error) error {
-	token := s.client.Subscribe(s.instance.params.Topic, 1, s.eventPubHandler(dispatch))
+func (s *Subscriber) Subscribe(events chan<- []byte) error {
+	token := s.client.Subscribe(s.instance.params.Topic, 1, s.eventPubHandler(events))
 	token.Wait()
 
 	if token.Error() != nil {
@@ -44,14 +42,10 @@ func (s *Subscriber) Subscribe(dispatch func(ctx context.Context, input *workflo
 	return nil
 }
 
-func (s *Subscriber) eventPubHandler(dispatch func(ctx context.Context, input *workflow.Input, data []byte) error) mqtt.MessageHandler {
+func (s *Subscriber) eventPubHandler(events chan<- []byte) mqtt.MessageHandler {
 	return func(client mqtt.Client, msg mqtt.Message) {
 		logger.Get().Info().Msgf("Received message: %s from topic: %s", msg.Payload(), msg.Topic())
 
-		err := dispatch(context.Background(), nil, msg.Payload())
-		if err != nil {
-			logger.Get().Error().Msgf("error dispatching message: %s", err)
-			return
-		}
+		events <- msg.Payload()
 	}
 }

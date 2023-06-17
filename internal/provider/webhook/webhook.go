@@ -2,25 +2,24 @@ package webhook
 
 import (
 	"context"
+	"github.com/valensto/ostraka/internal/http"
 	"github.com/valensto/ostraka/internal/logger"
-	"github.com/valensto/ostraka/internal/server"
-	"github.com/valensto/ostraka/internal/workflow"
-	"github.com/valensto/ostraka/internal/workflow/middleware"
+	"github.com/valensto/ostraka/internal/middleware"
 	"io"
-	"net/http"
+	stdHTTP "net/http"
 )
 
 const Webhook = "webhook"
 
 type Subscriber struct {
-	server *server.Server
+	server *http.Server
 	params *Params
 
 	authenticator middleware.Authenticator
 	cors          *middleware.CORS
 }
 
-func NewSubscriber(params []byte, server *server.Server, middlewares *middleware.Middlewares) (*Subscriber, error) {
+func NewSubscriber(params []byte, server *http.Server, middlewares *middleware.Middlewares) (*Subscriber, error) {
 	p, err := unmarshalWebhook(params)
 	if err != nil {
 		return nil, err
@@ -50,12 +49,15 @@ func NewSubscriber(params []byte, server *server.Server, middlewares *middleware
 	return &s, nil
 }
 
-func (s *Subscriber) Subscribe(dispatch func(ctx context.Context, input *workflow.Input, data []byte) error) error {
-	endpoint := server.Endpoint{
-		Method:  server.POST,
+func (s *Subscriber) Subscribe(events chan<- struct {
+	data []byte
+	ctx  context.Context
+}) error {
+	endpoint := http.Endpoint{
+		Method:  http.POST,
 		Path:    s.params.Endpoint,
 		Cors:    s.cors,
-		Handler: s.endpoint(dispatch),
+		Handler: s.endpoint(events),
 		Auth:    s.authenticator,
 	}
 
@@ -68,30 +70,32 @@ func (s *Subscriber) Subscribe(dispatch func(ctx context.Context, input *workflo
 	return nil
 }
 
-func (s *Subscriber) endpoint(dispatch func(ctx context.Context, input *workflow.Input, data []byte) error) http.HandlerFunc {
+func (s *Subscriber) endpoint(events chan<- struct {
+	data []byte
+	ctx  context.Context
+}) stdHTTP.HandlerFunc {
 	type response struct {
 		Message string `json:"message"`
 	}
 
-	return func(w http.ResponseWriter, r *http.Request) {
+	return func(w stdHTTP.ResponseWriter, r *stdHTTP.Request) {
 		bytes, err := io.ReadAll(r.Body)
 		if err != nil {
-			s.server.Respond(w, r, http.StatusBadRequest, response{
+			s.server.Respond(w, r, stdHTTP.StatusBadRequest, response{
 				Message: "error reading request body",
 			})
 			return
 		}
 
-		// TODO: add input
-		err = dispatch(r.Context(), nil, bytes)
-		if err != nil {
-			s.server.Respond(w, r, http.StatusBadRequest, response{
-				Message: "error dispatching event",
-			})
-			return
+		events <- struct {
+			data []byte
+			ctx  context.Context
+		}{
+			data: bytes,
+			ctx:  r.Context(),
 		}
 
-		s.server.Respond(w, r, http.StatusOK, response{
+		s.server.Respond(w, r, stdHTTP.StatusOK, response{
 			Message: "event dispatched",
 		})
 	}

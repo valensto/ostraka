@@ -3,8 +3,8 @@ package workflow
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/valensto/ostraka/internal/workflow/provider/mqtt"
-	"github.com/valensto/ostraka/internal/workflow/provider/sse"
+	mqtt2 "github.com/valensto/ostraka/internal/provider/mqtt"
+	"github.com/valensto/ostraka/internal/provider/sse"
 )
 
 type Publisher interface {
@@ -52,8 +52,8 @@ func newPublisher(dst string, params any, opts Options) (Publisher, error) {
 	case sse.SSE:
 		return sse.NewPublisher(b, opts.Server, opts.Middlewares)
 
-	case mqtt.MQTT:
-		return mqtt.NewPublisher(b)
+	case mqtt2.MQTT:
+		return mqtt2.NewPublisher(b)
 
 	default:
 		return nil, fmt.Errorf("unknown publisher type: %s", dst)

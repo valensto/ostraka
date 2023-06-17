@@ -2,13 +2,12 @@ package local
 
 import (
 	"fmt"
-	"io"
-	"os"
-	"path/filepath"
-
 	"github.com/valensto/ostraka/internal/config/static"
 	"github.com/valensto/ostraka/internal/logger"
 	"github.com/valensto/ostraka/internal/workflow"
+	"io"
+	"os"
+	"path/filepath"
 )
 
 func Extract(source string) ([]*workflow.Workflow, error) {

@@ -3,10 +3,9 @@ package webui
 import (
 	"github.com/valensto/ostraka/internal/collector"
 	"github.com/valensto/ostraka/internal/config/env"
+	ostraHTTP "github.com/valensto/ostraka/internal/http"
 	"github.com/valensto/ostraka/internal/logger"
-	"github.com/valensto/ostraka/internal/server"
 	"github.com/valensto/ostraka/internal/workflow"
-	"github.com/valensto/ostraka/internal/workflow/provider/sse"
 	"golang.org/x/crypto/bcrypt"
 	"html/template"
 	"net/http"
@@ -14,25 +13,26 @@ import (
 )
 
 type Webui struct {
-	server *server.Server
+	server *ostraHTTP.Server
 	events chan workflow.Event
 	config env.Webui
 }
 
-func New(config env.Webui, server *server.Server, workflows []*workflow.Workflow) (*Webui, error) {
+func New(config env.Webui, server *ostraHTTP.Server, workflows []*workflow.Workflow) (*Webui, error) {
 	webui := &Webui{
 		server: server,
 		events: make(chan workflow.Event),
 		config: config,
 	}
 
-	server.Router.Handle("/assets/*", http.StripPrefix("/assets/", http.FileServer(http.Dir("webui/dist/assets"))))
+	server.Router.Handle("/assets/*", http.StripPrefix("/assets/", http.FileServer(http.Dir("views/dist/assets"))))
 	server.Router.Get("/webui/dashboard", webui.basicAuth(webui.dashboard()))
 	server.Router.Get("/webui/workflows", webui.workflows(workflows))
 
-	logger.Get().Info().Msgf("webui running on %s:%s/webui/dashboard", webui.server.Host, webui.server.Port)
+	logger.Get().Info().Msgf("views running on %s:%s/views/dashboard", webui.server.Host, webui.server.Port)
 
-	return webui, sse.WebUIPublisher(config).Publish(webui.events, server)
+	/*return webui, sse.WebUIPublisher(config).Publish(webui.events, server)*/
+	return webui, nil
 }
 
 func (webui *Webui) Consume(event collector.Event) {
@@ -88,7 +88,7 @@ func (webui *Webui) workflows(workflows []*workflow.Workflow) http.HandlerFunc {
 
 func (webui *Webui) dashboard() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		tmpl := template.Must(template.ParseFiles("webui/dist/index.html"))
+		tmpl := template.Must(template.ParseFiles("views/dist/index.html"))
 		err := tmpl.Execute(w, nil)
 		if err != nil {
 			webui.server.Respond(w, r, http.StatusInternalServerError, nil)

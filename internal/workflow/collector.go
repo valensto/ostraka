@@ -1,10 +1,9 @@
-package collector
+package workflow
 
 import (
 	"github.com/google/uuid"
 	"github.com/rs/zerolog"
 	"github.com/valensto/ostraka/internal/logger"
-	"github.com/valensto/ostraka/internal/workflow"
 	"time"
 )
 
@@ -13,20 +12,9 @@ type consumer interface {
 }
 
 type Collector struct {
-	workflow  *workflow.Workflow
+	workflow  *Workflow
 	consumers []consumer
 	queue     chan Event
-}
-
-func New(wf *workflow.Workflow, consumers ...consumer) *Collector {
-	c := &Collector{
-		workflow:  wf,
-		consumers: consumers,
-		queue:     make(chan Event),
-	}
-
-	c.broadcast()
-	return c
 }
 
 func (c *Collector) broadcast() {
@@ -47,16 +35,16 @@ func (c *Collector) broadcast() {
 }
 
 type Collect struct {
-	event *Event
+	event *EventCollect
 	err   error
 
 	queue    chan<- Event
 	logLevel zerolog.Level
 }
 
-func (c *Collector) Collect(from *workflow.Input, data []byte) *Collect {
+func (c *Collector) Collect(from *Input, data []byte) *Collect {
 	return &Collect{
-		event: &Event{
+		event: &EventCollect{
 			WorkflowSlug: c.workflow.Slug,
 			From: source{
 				Provider: from.Source,
@@ -73,11 +61,11 @@ func (c *Collector) Collect(from *workflow.Input, data []byte) *Collect {
 	}
 }
 
-func (c *Collect) WithOutput(output *workflow.Output, event workflow.Event) *Collect {
+func (c *Collect) WithOutput(output *Output, event Event) *Collect {
 	c.event.To = source{
 		Provider: output.Destination,
 		Name:     output.Name,
-		Data:     string(event.jsonEncode()),
+		Data:     "string(event.jsonEncode())",
 	}
 	return c
 }
@@ -102,9 +90,54 @@ func (c *Collect) WithLogLevel(lvl zerolog.Level) *Collect {
 func (c *Collect) Send() {
 	c.event.Id = uuid.NewString()
 	logger.Get().WithLevel(c.logLevel).Msgf(c.event.Message)
-	c.queue <- *c.event
+	/*c.queue <- *c.event*/
 }
 
 func (c *Collect) Error() error {
 	return c.err
+}
+
+type (
+	state string
+)
+
+const (
+	succeed state = "succeed"
+	failed  state = "failed"
+)
+
+type EventCollect struct {
+	Id           string    `json:"id"`
+	WorkflowSlug string    `json:"workflow_slug"`
+	From         source    `json:"from"`
+	To           source    `json:"to"`
+	State        state     `json:"state"`
+	Message      string    `json:"message"`
+	CollectedAt  time.Time `json:"collected_at"`
+}
+
+type source struct {
+	Provider string `json:"provider"`
+	Name     string `json:"name"`
+	Data     string `json:"data"`
+}
+
+func (e *EventCollect) ToMap() map[string]any {
+	return map[string]any{
+		"id":            e.Id,
+		"workflow_slug": e.WorkflowSlug,
+		"from": map[string]any{
+			"provider": e.From.Provider,
+			"name":     e.From.Name,
+			"data":     e.From.Data,
+		},
+		"to": map[string]any{
+			"provider": e.To.Provider,
+			"name":     e.To.Name,
+			"data":     e.To.Data,
+		},
+		"state":        e.State,
+		"message":      e.Message,
+		"collected_at": e.CollectedAt,
+	}
 }

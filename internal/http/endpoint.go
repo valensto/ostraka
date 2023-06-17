@@ -1,9 +1,9 @@
-package server
+package http
 
 import (
 	"fmt"
 	"github.com/go-chi/chi/v5"
-	"github.com/valensto/ostraka/internal/workflow/middleware"
+	middleware2 "github.com/valensto/ostraka/internal/middleware"
 	"net/http"
 )
 
@@ -34,8 +34,8 @@ func (m Method) validate() error {
 type Endpoint struct {
 	Method      Method
 	Path        string
-	Cors        *middleware.CORS
-	Auth        middleware.Authenticator
+	Cors        *middleware2.CORS
+	Auth        middleware2.Authenticator
 	Handler     func(w http.ResponseWriter, r *http.Request)
 	Middlewares []func(handlerFunc http.HandlerFunc) http.HandlerFunc
 }

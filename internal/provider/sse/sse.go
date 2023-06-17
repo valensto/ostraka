@@ -3,16 +3,16 @@ package sse
 import (
 	"bytes"
 	"fmt"
+	"github.com/valensto/ostraka/internal/http"
 	"github.com/valensto/ostraka/internal/logger"
-	"github.com/valensto/ostraka/internal/server"
-	"github.com/valensto/ostraka/internal/workflow/middleware"
-	"net/http"
+	"github.com/valensto/ostraka/internal/middleware"
+	stdHTTP "net/http"
 )
 
 const SSE = "sse"
 
 type Publisher struct {
-	server *server.Server
+	server *http.Server
 
 	params        *Params
 	authenticator middleware.Authenticator
@@ -27,7 +27,7 @@ type Publisher struct {
 
 type client chan []byte
 
-func NewPublisher(params []byte, s *server.Server, middlewares *middleware.Middlewares) (*Publisher, error) {
+func NewPublisher(params []byte, s *http.Server, middlewares *middleware.Middlewares) (*Publisher, error) {
 	p, err := unmarshalParams(params)
 	if err != nil {
 		return nil, err
@@ -60,8 +60,8 @@ func NewPublisher(params []byte, s *server.Server, middlewares *middleware.Middl
 		}
 	}
 
-	endpoint := server.Endpoint{
-		Method:  server.GET,
+	endpoint := http.Endpoint{
+		Method:  http.GET,
 		Path:    publisher.params.Endpoint,
 		Cors:    publisher.cors,
 		Handler: publisher.endpoint(),
@@ -102,12 +102,12 @@ func (p *Publisher) listenConn() {
 	}()
 }
 
-func (p *Publisher) endpoint() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		fl, ok := w.(http.Flusher)
+func (p *Publisher) endpoint() stdHTTP.HandlerFunc {
+	return func(w stdHTTP.ResponseWriter, r *stdHTTP.Request) {
+		fl, ok := w.(stdHTTP.Flusher)
 		if !ok {
 			logger.Get().Error().Msg("error flushing response writer: flushing not supported")
-			p.server.Respond(w, r, http.StatusNotImplemented, nil)
+			p.server.Respond(w, r, stdHTTP.StatusNotImplemented, nil)
 			return
 		}
 

@@ -3,8 +3,8 @@ package workflow
 import (
 	"fmt"
 	"github.com/gosimple/slug"
-	"github.com/valensto/ostraka/internal/server"
-	"github.com/valensto/ostraka/internal/workflow/middleware"
+	"github.com/valensto/ostraka/internal/http"
+	"github.com/valensto/ostraka/internal/middleware"
 )
 
 type Workflow struct {
@@ -16,7 +16,7 @@ type Workflow struct {
 
 type Options struct {
 	Middlewares *middleware.Middlewares
-	Server      *server.Server
+	Server      *http.Server
 }
 
 func New(name string, inputs []*Input, outputs []*Output) (*Workflow, error) {
@@ -30,4 +30,13 @@ func New(name string, inputs []*Input, outputs []*Output) (*Workflow, error) {
 		Inputs:  inputs,
 		Outputs: outputs,
 	}, nil
+}
+
+func (w *Workflow) Dispatch(consumers ...consumer) {
+	c := &Collector{
+		consumers: consumers,
+		queue:     make(chan Event),
+	}
+
+	c.broadcast()
 }

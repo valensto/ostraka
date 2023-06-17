@@ -4,8 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/valensto/ostraka/internal/workflow/provider/mqtt"
-	"github.com/valensto/ostraka/internal/workflow/provider/webhook"
+	mqtt2 "github.com/valensto/ostraka/internal/provider/mqtt"
+	"github.com/valensto/ostraka/internal/provider/webhook"
 )
 
 type Subscriber interface {
@@ -48,8 +48,8 @@ func newSubscriber(src string, params any, opts Options) (Subscriber, error) {
 	case webhook.Webhook:
 		return webhook.NewSubscriber(b, opts.Server, opts.Middlewares)
 
-	case mqtt.MQTT:
-		return mqtt.NewSubscriber(b)
+	case mqtt2.MQTT:
+		return mqtt2.NewSubscriber(b)
 
 	default:
 		return nil, fmt.Errorf("unknown subscriber type: %s", src)
