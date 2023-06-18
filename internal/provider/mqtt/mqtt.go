@@ -7,17 +7,17 @@ import (
 	"time"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
-	"github.com/valensto/ostraka/internal/workflow"
 )
 
-type MQTT struct {
+const MQTT = "mqtt"
+
+type instance struct {
 	client    mqtt.Client
 	connected chan bool
-	name      string
-	params    workflow.MQTTParams
+	params    *Params
 }
 
-func (m *MQTT) connect() error {
+func (m *instance) connect() error {
 	opts := mqtt.NewClientOptions()
 	opts.AddBroker(m.params.Broker)
 	opts.SetClientID(fmt.Sprintf("%s-%s", uuid.New(), "ostraka"))
@@ -43,7 +43,7 @@ func (m *MQTT) connect() error {
 	return nil
 }
 
-func (m *MQTT) keepalive() {
+func (m *instance) keepalive() {
 	const period = 2 * time.Second
 	var up, closed bool
 	log := logger.Get()
@@ -59,9 +59,9 @@ func (m *MQTT) keepalive() {
 				continue
 			}
 
-			logger.Get().Info().Msgf("%s send mqtt keep-alive", m.name)
+			logger.Get().Info().Msgf("send mqtt keep-alive to broker %s", m.params.Broker)
 			if token := m.client.Publish("ping_topic", 0, false, "ping"); token.Wait() && token.Error() != nil {
-				log.Warn().Msgf("%s mqtt keep-alive failed: %s", m.name, token.Error())
+				log.Warn().Msgf("mqtt keep-alive failed to broker %s with err: %s", m.params.Broker, token.Error())
 			}
 			break
 		}
@@ -80,12 +80,12 @@ var connectLostHandler mqtt.ConnectionLostHandler = func(client mqtt.Client, err
 	logger.Get().Warn().Msgf("Connection lost: %v", err)
 }
 
-func (m *MQTT) Disconnect() {
+func (m *instance) Disconnect() {
 	m.client.Disconnect(500)
 	close(m.connected)
 }
 
-func (m *MQTT) Connect() error {
+func (m *instance) Connect() error {
 	if m.client.IsConnected() {
 		return nil
 	}

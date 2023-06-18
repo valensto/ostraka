@@ -4,51 +4,51 @@ import (
 	"fmt"
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/valensto/ostraka/internal/logger"
-	"github.com/valensto/ostraka/internal/workflow"
 )
 
 type Subscriber struct {
-	MQTT
-	*workflow.Input
+	instance
 }
 
-func NewSubscriber(input *workflow.Input) (*Subscriber, error) {
-	params, err := input.MQTTParams()
+func NewSubscriber(params []byte) (*Subscriber, error) {
+	p, err := unmarshalParams(params)
 	if err != nil {
 		return nil, err
 	}
 
-	s := Subscriber{
-		MQTT: MQTT{
-			name:   input.Name,
-			params: params,
+	subscriber := Subscriber{
+		instance: instance{
+			params: p,
 		},
-		Input: input,
 	}
 
-	err = s.MQTT.connect()
+	err = subscriber.instance.connect()
 	if err != nil {
 		return nil, err
 	}
 
-	return &s, nil
+	return &subscriber, nil
 }
 
-func (m *Subscriber) Subscribe(dispatch func(from *workflow.Input, data []byte)) error {
-	token := m.client.Subscribe(m.MQTT.params.Topic, 1, m.eventPubHandler(dispatch))
+func (s *Subscriber) Subscribe(events chan<- []byte) error {
+	token := s.client.Subscribe(s.instance.params.Topic, 1, s.eventPubHandler(events))
 	token.Wait()
 
 	if token.Error() != nil {
-		return fmt.Errorf("error subscribing to topic: %s", m.MQTT.params.Topic)
+		return fmt.Errorf("error subscribing to topic: %s", s.instance.params.Topic)
 	}
 
-	logger.Get().Info().Msgf("subscriber %s of type MQTT registered. Listening from topic %s", m.name, m.MQTT.params.Topic)
+	logger.Get().Info().Msgf("subscriber of type MQTT registered. Listening from topic %s", s.instance.params.Topic)
 	return nil
 }
 
-func (m *Subscriber) eventPubHandler(dispatch func(from *workflow.Input, data []byte)) mqtt.MessageHandler {
+func (s *Subscriber) Provider() string {
+	return MQTT
+}
+
+func (s *Subscriber) eventPubHandler(events chan<- []byte) mqtt.MessageHandler {
 	return func(client mqtt.Client, msg mqtt.Message) {
 		logger.Get().Info().Msgf("Received message: %s from topic: %s", msg.Payload(), msg.Topic())
-		dispatch(m.Input, msg.Payload())
+		events <- msg.Payload()
 	}
 }

@@ -79,11 +79,46 @@ event_type:
     - name: nonRequiredField
       data_type: string
 
+middlewares:
+  cors:
+    - name: default
+      allowed_origins:
+        - http://localhost:3000
+        - http://localhost:4000
+      allowed_methods:
+        - POST
+      allowed_headers:
+        - Content-Type
+        - Authorization
+      allow_credentials: true
+      max_age: 3600
+
+  auth:
+    - name: default
+      type: jwt
+      params:
+        header: Authorization
+        secret: secret
+        algorithm: HS256
+        verify_expiration: true
+        max_age: 3600
+        payload:
+          - name: accountId
+            data_type: string
+            required: true
+
+    - name: webhook
+      type: token
+      params:
+        token: 2dc7929e5b589cb7861bcae19e13ad96
+        query_param: token
+
 inputs:
   - name: webhook-orders
     source: webhook
     params:
       endpoint: /webhook/orders
+      auth: webhook
     decoder:
       format: json
       mappers:
@@ -99,6 +134,8 @@ outputs:
     destination: sse
     params:
       endpoint: /sse/orders/completed
+      auth: default
+      cors: default
     condition:
       operator: or
       conditions:
@@ -112,6 +149,8 @@ outputs:
     destination: sse
     params:
       endpoint: /sse/orders/failed
+      cors: default
+      auth: default
     condition:
       field: orderStatus
       operator: eq

@@ -1,9 +1,8 @@
 package env
 
 import (
-	"fmt"
+	"github.com/valensto/ostraka/internal/logger"
 	"os"
-	"strconv"
 	"strings"
 )
 
@@ -17,53 +16,55 @@ type Webui struct {
 	Enabled           bool
 	BasicAuthPwd      string
 	BasicAuthUsername string
+	AllowedOrigins    []string
+	AuthToken         string
 }
 
-func Load() (*Config, error) {
-	host := os.Getenv("HOST")
-	if host == "" {
-		return nil, fmt.Errorf("HOST env var is required")
-	}
-
-	port := os.Getenv("PORT")
-	if port == "" {
-		return nil, fmt.Errorf("PORT env var is required")
-	}
-
-	webui, err := loadWebui()
-	if err != nil {
-		return nil, err
-	}
-
+func Load() *Config {
 	return &Config{
-		Host:  host,
-		Port:  port,
-		Webui: webui,
-	}, nil
+		Host:  mustGet("HOST"),
+		Port:  mustGet("PORT"),
+		Webui: loadWebui(),
+	}
 }
 
-func loadWebui() (Webui, error) {
-	enabled, err := strconv.ParseBool(os.Getenv("WEBUI_ENABLED"))
-	if err != nil {
-		return Webui{}, fmt.Errorf("cannot parse WEBUI_ENABLED env var to boolean: %w", err)
+func loadWebui() Webui {
+	enabled := mustGet("WEBUI_ENABLED") == "true"
+	if !enabled {
+		return Webui{}
+	}
+
+	allowedOrigins := mustGet("WEBUI_SSE_ALLOWED_ORIGINS")
+	aos := strings.Split(allowedOrigins, ",")
+	if len(aos) == 0 {
+		logger.Get().Fatal().Msgf("WEBUI_SSE_ALLOWED_ORIGINS env var must be a comma separated list")
 	}
 
 	webui := Webui{
-		Enabled:           enabled,
-		BasicAuthPwd:      "",
-		BasicAuthUsername: "",
+		Enabled:        enabled,
+		AuthToken:      mustGet("WEBUI_SSE_TOKEN"),
+		AllowedOrigins: aos,
 	}
 
-	basicAuth := os.Getenv("WEBUI_BASIC_AUTH")
+	basicAuth := mustGet("WEBUI_BASIC_AUTH")
 	if basicAuth != "" {
 		parsed := strings.Split(basicAuth, ":")
 		if len(parsed) != 2 {
-			return Webui{}, fmt.Errorf("WEBUI_BASIC_AUTH env var is not valid")
+			logger.Get().Fatal().Msgf("WEBUI_BASIC_AUTH env var must be a colon separated string")
 		}
 
 		webui.BasicAuthUsername = parsed[0]
 		webui.BasicAuthPwd = parsed[1]
 	}
 
-	return webui, nil
+	return webui
+}
+
+func mustGet(key string) string {
+	value := os.Getenv(key)
+	if value == "" {
+		logger.Get().Fatal().Msgf("env var %s is required", key)
+	}
+
+	return value
 }

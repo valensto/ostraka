@@ -1,9 +1,9 @@
-package server
+package http
 
 import (
 	"fmt"
 	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/cors"
+	"github.com/valensto/ostraka/internal/middleware"
 	"net/http"
 )
 
@@ -34,7 +34,8 @@ func (m Method) validate() error {
 type Endpoint struct {
 	Method      Method
 	Path        string
-	Cors        *cors.Cors
+	Cors        *middleware.CORS
+	Auth        middleware.Authenticator
 	Handler     func(w http.ResponseWriter, r *http.Request)
 	Middlewares []func(handlerFunc http.HandlerFunc) http.HandlerFunc
 }
@@ -62,13 +63,18 @@ func (s *Server) AddSubRouter(endpoint Endpoint) error {
 
 	subRouter := chi.NewRouter()
 
+	if endpoint.Cors != nil {
+		fmt.Printf("cors %+v\n", endpoint.Cors)
+		subRouter.Use(endpoint.Cors.Init().Handler)
+	}
+
+	if endpoint.Auth != nil {
+		subRouter.Use(endpoint.Auth.Register)
+	}
+
 	handler := endpoint.Handler
 	for i := len(endpoint.Middlewares) - 1; i >= 0; i-- {
 		handler = endpoint.Middlewares[i](handler)
-	}
-
-	if endpoint.Cors != nil {
-		subRouter.Use(endpoint.Cors.Handler)
 	}
 
 	subRouter.MethodFunc(endpoint.Method.String(), "/", handler)

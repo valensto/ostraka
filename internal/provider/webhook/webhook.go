@@ -1,65 +1,91 @@
 package webhook
 
 import (
+	"github.com/valensto/ostraka/internal/http"
 	"github.com/valensto/ostraka/internal/logger"
-	"github.com/valensto/ostraka/internal/server"
+	"github.com/valensto/ostraka/internal/middleware"
 	"io"
-	"net/http"
-
-	"github.com/valensto/ostraka/internal/workflow"
+	stdHTTP "net/http"
 )
 
+const Webhook = "webhook"
+
 type Subscriber struct {
-	server *server.Server
-	params workflow.WebhookParams
-	*workflow.Input
+	server *http.Server
+	params *Params
+
+	authenticator middleware.Authenticator
+	cors          *middleware.CORS
 }
 
-func NewSubscriber(input *workflow.Input, server *server.Server) (*Subscriber, error) {
-	params, err := input.WebhookParams()
+func NewSubscriber(params []byte, server *http.Server, middlewares *middleware.Middlewares) (*Subscriber, error) {
+	p, err := unmarshalWebhook(params)
 	if err != nil {
 		return nil, err
 	}
 
-	return &Subscriber{
-		server: server,
-		Input:  input,
-		params: params,
-	}, nil
-}
-
-func (i *Subscriber) Subscribe(dispatch func(from *workflow.Input, data []byte)) error {
-	endpoint := server.Endpoint{
-		Method:  server.POST,
-		Path:    i.params.Endpoint,
-		Handler: i.endpoint(dispatch),
+	s := Subscriber{
+		server:        server,
+		params:        p,
+		authenticator: nil,
+		cors:          nil,
 	}
 
-	err := i.server.AddSubRouter(endpoint)
+	if p.Auth != "" {
+		s.authenticator, err = middlewares.HTTP.Authenticator(p.Auth)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if p.CORS != "" {
+		s.cors, err = middlewares.HTTP.Cors(p.CORS)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return &s, nil
+}
+
+func (s *Subscriber) Provider() string {
+	return Webhook
+}
+
+func (s *Subscriber) Subscribe(events chan<- []byte) error {
+	endpoint := http.Endpoint{
+		Method:  http.POST,
+		Path:    s.params.Endpoint,
+		Cors:    s.cors,
+		Handler: s.endpoint(events),
+		Auth:    s.authenticator,
+	}
+
+	err := s.server.AddSubRouter(endpoint)
 	if err != nil {
 		return err
 	}
 
-	logger.Get().Info().Msgf("subscriber %s of type webhook registered. Listening from endpoint %s", i.Name, i.params.Endpoint)
+	logger.Get().Info().Msgf("subscriber of type webhook registered. Listening from endpoint %s", s.params.Endpoint)
 	return nil
 }
 
-func (i *Subscriber) endpoint(dispatch func(from *workflow.Input, data []byte)) http.HandlerFunc {
+func (s *Subscriber) endpoint(events chan<- []byte) stdHTTP.HandlerFunc {
 	type response struct {
 		Message string `json:"message"`
 	}
 
-	return func(w http.ResponseWriter, r *http.Request) {
-		bytes, err := io.ReadAll(r.Body)
+	return func(w stdHTTP.ResponseWriter, r *stdHTTP.Request) {
+		b, err := io.ReadAll(r.Body)
 		if err != nil {
-			i.server.Respond(w, r, http.StatusBadRequest, response{
+			s.server.Respond(w, r, stdHTTP.StatusBadRequest, response{
 				Message: "error reading request body",
 			})
 			return
 		}
 
-		dispatch(i.Input, bytes)
-		i.server.Respond(w, r, http.StatusOK, response{
+		events <- b
+		s.server.Respond(w, r, stdHTTP.StatusOK, response{
 			Message: "event dispatched",
 		})
 	}

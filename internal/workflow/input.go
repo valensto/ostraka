@@ -1,68 +1,47 @@
 package workflow
 
 import (
-	"encoding/json"
 	"fmt"
+	"github.com/valensto/ostraka/internal/event"
+	"github.com/valensto/ostraka/internal/provider"
 )
 
 type Input struct {
 	Name    string
-	Source  Source
-	Decoder Decoder
-	params  any
+	Decoder *event.Decoder
+
+	Subscriber provider.Subscriber
+	queue      chan []byte
 }
 
-func UnmarshallInput(name, source string, decoder Decoder, params any, event *EventType) (*Input, error) {
-	src, err := getSource(source)
-	if err != nil {
-		return nil, err
+func UnmarshallInput(name, source string, decoder *event.Decoder, params any, opts provider.Options) (*Input, error) {
+	if name == "" {
+		return nil, fmt.Errorf("input name is empty")
 	}
 
-	i := &Input{
+	subscriber, err := provider.NewSubscriber(source, params, opts)
+	if err != nil {
+		return nil, fmt.Errorf("error creating subscriber for output %s got: %w", name, err)
+	}
+
+	return &Input{
 		Name:    name,
-		Source:  src,
 		Decoder: decoder,
-		params:  params,
-	}
 
-	err = i.unmarshallParams(event)
-	if err != nil {
-		return nil, err
-	}
-
-	return i, nil
+		Subscriber: subscriber,
+		queue:      make(chan []byte),
+	}, nil
 }
 
-func (i *Input) unmarshallParams(e *EventType) error {
-	marshalled, err := json.Marshal(i.params)
-	if err != nil {
-		return fmt.Errorf("error marshalling input params: %w", err)
-	}
-
-	var params parameter
-	switch i.Source {
-	case Webhook:
-		var wh WebhookParams
-		err = unmarshalParams(marshalled, &wh)
-		if err != nil {
-			return err
+func (i *Input) listen(dispatch func(from *Input, bytes []byte)) error {
+	go func() {
+		for {
+			select {
+			case b := <-i.queue:
+				dispatch(i, b)
+			}
 		}
+	}()
 
-		params = wh
-	case MQTTSub:
-		var mqtt MQTTParams
-		err = unmarshalParams(marshalled, &mqtt)
-		if err != nil {
-			return err
-		}
-
-		params = mqtt
-	default:
-		return fmt.Errorf("unknown input type: %s", i.Source)
-	}
-
-	i.params = params
-	i.Decoder.event = e
-
-	return params.validate()
+	return i.Subscriber.Subscribe(i.queue)
 }

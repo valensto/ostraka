@@ -2,38 +2,38 @@ package local
 
 import (
 	"fmt"
+	"github.com/valensto/ostraka/internal/config/static"
+	"github.com/valensto/ostraka/internal/logger"
 	"io"
 	"os"
 	"path/filepath"
-
-	"github.com/valensto/ostraka/internal/config/static"
-	"github.com/valensto/ostraka/internal/logger"
-	"github.com/valensto/ostraka/internal/workflow"
 )
 
-func Extract(source string) ([]*workflow.Workflow, error) {
+func Extract(source string) (static.ContentFile, error) {
 	dir, err := os.ReadDir(source)
 	if err != nil {
 		return nil, fmt.Errorf("error reading resources directory: %w", err)
 	}
 
-	workflows := make(map[string][]byte)
+	contentFile := make(static.ContentFile)
 	for _, file := range dir {
-		ext := filepath.Ext(file.Name())
+		fn := file.Name()
+
+		ext := filepath.Ext(fn)
 		if ext != ".yaml" && ext != ".yml" {
-			logger.Get().Warn().Msgf(`file (%s) be skipped. No matching with authorized extensions (yaml | yml) found`, file.Name())
+			logger.Get().Warn().Msgf(`file (%s) be skipped. No matching with authorized extensions (yaml | yml) found`, fn)
 			continue
 		}
 
-		wf, err := extractBytes(filepath.Join(source, file.Name()))
+		b, err := extractBytes(filepath.Join(source, fn))
 		if err != nil {
 			return nil, fmt.Errorf("error extracting workflow: %w", err)
 		}
 
-		workflows[file.Name()] = wf
+		contentFile[fn] = b
 	}
 
-	return static.BuildWorkflows(workflows)
+	return contentFile, nil
 }
 
 func extractBytes(filename string) ([]byte, error) {

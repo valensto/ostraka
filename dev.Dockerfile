@@ -1,8 +1,8 @@
 FROM node:18.16.0 as webui
-ENV WEBUI_DIR /src/webui
+ENV WEBUI_DIR /src/ui
 
 RUN mkdir -p $WEBUI_DIR
-COPY ./webui/ $WEBUI_DIR/
+COPY ui/ $WEBUI_DIR/
 WORKDIR $WEBUI_DIR
 
 RUN yarn install --silent
@@ -13,8 +13,8 @@ FROM golang:1.20-alpine as builder
 RUN apk update && apk add --no-cache git
 RUN go install github.com/cespare/reflex@latest
 
-RUN rm -rf /ostraka/webui/dist/
-COPY --from=webui /src/webui/dist/ /ostraka/webui/dist/
+RUN rm -rf /ostraka/ui/dist/
+COPY --from=webui /src/ui/dist/ /ostraka/ui/dist/
 
 COPY scripts/run.sh /
 COPY scripts/test.sh /

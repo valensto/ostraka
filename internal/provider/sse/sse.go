@@ -3,17 +3,21 @@ package sse
 import (
 	"bytes"
 	"fmt"
+	"github.com/valensto/ostraka/internal/http"
 	"github.com/valensto/ostraka/internal/logger"
-	"github.com/valensto/ostraka/internal/server"
-	"net/http"
-
-	"github.com/valensto/ostraka/internal/workflow"
+	"github.com/valensto/ostraka/internal/middleware"
+	stdHTTP "net/http"
 )
 
+const SSE = "sse"
+
 type Publisher struct {
-	server *server.Server
-	*workflow.Output
-	params        workflow.SSEParams
+	server *http.Server
+
+	params        *Params
+	authenticator middleware.Authenticator
+	cors          *middleware.CORS
+
 	clients       map[client]bool
 	connecting    chan client
 	disconnecting chan client
@@ -23,16 +27,18 @@ type Publisher struct {
 
 type client chan []byte
 
-func NewPublisher(output *workflow.Output, server *server.Server) (*Publisher, error) {
-	params, err := output.SSEParams()
+func NewPublisher(params []byte, s *http.Server, middlewares *middleware.Middlewares) (*Publisher, error) {
+	p, err := unmarshalParams(params)
 	if err != nil {
 		return nil, err
 	}
 
-	o := &Publisher{
-		server:        server,
-		Output:        output,
-		params:        params,
+	publisher := Publisher{
+		server:        s,
+		params:        p,
+		authenticator: nil,
+		cors:          nil,
+
 		clients:       make(map[client]bool),
 		connecting:    make(chan client),
 		disconnecting: make(chan client),
@@ -40,37 +46,74 @@ func NewPublisher(output *workflow.Output, server *server.Server) (*Publisher, e
 		eventCounter:  0,
 	}
 
-	return o, nil
-}
-
-func (o *Publisher) Publish(events <-chan []byte) error {
-	endpoint := server.Endpoint{
-		Method:  server.GET,
-		Path:    o.params.Endpoint,
-		Handler: o.endpoint(),
+	if p.Auth != "" {
+		publisher.authenticator, err = middlewares.HTTP.Authenticator(p.Auth)
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	o.listen(events)
+	if p.CORS != "" {
+		publisher.cors, err = middlewares.HTTP.Cors(p.CORS)
+		if err != nil {
+			return nil, err
+		}
+	}
 
-	err := o.server.AddSubRouter(endpoint)
+	endpoint := http.Endpoint{
+		Method:  http.GET,
+		Path:    publisher.params.Endpoint,
+		Cors:    publisher.cors,
+		Handler: publisher.endpoint(),
+		Auth:    publisher.authenticator,
+	}
+
+	err = s.AddSubRouter(endpoint)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	logger.Get().Info().Msgf("publisher %s of type SSE registered. Sending to endpoint %s", o.Output.Name, o.params.Endpoint)
-	return nil
+	publisher.listenConn()
+	logger.Get().Info().Msgf("publisher of type SSE registered. Sending to endpoint %s", publisher.params.Endpoint)
+	return &publisher, nil
 }
 
-func (o *Publisher) endpoint() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		fl, ok := w.(http.Flusher)
+func (p *Publisher) Provider() string {
+	return SSE
+}
+
+func (p *Publisher) Publish(b []byte) {
+	msg := format(fmt.Sprintf("%d", p.eventCounter), "message", b)
+	p.eventCounter++
+	for cl := range p.clients {
+		cl <- msg.Bytes()
+	}
+
+	logger.Get().Info().Msgf("event published to endpoint %s", p.params.Endpoint)
+}
+
+func (p *Publisher) listenConn() {
+	go func() {
+		for {
+			select {
+			case cl := <-p.connecting:
+				p.clients[cl] = true
+
+			case cl := <-p.disconnecting:
+				delete(p.clients, cl)
+			}
+		}
+	}()
+}
+
+func (p *Publisher) endpoint() stdHTTP.HandlerFunc {
+	return func(w stdHTTP.ResponseWriter, r *stdHTTP.Request) {
+		fl, ok := w.(stdHTTP.Flusher)
 		if !ok {
 			logger.Get().Error().Msg("error flushing response writer: flushing not supported")
-			o.server.Respond(w, r, http.StatusNotImplemented, nil)
+			p.server.Respond(w, r, stdHTTP.StatusNotImplemented, nil)
 			return
 		}
-
-		done := r.Context().Done()
 
 		h := w.Header()
 		h.Set("Access-Control-Allow-Origin", "*")
@@ -79,43 +122,21 @@ func (o *Publisher) endpoint() http.HandlerFunc {
 		h.Set("Connection", "keep-alive")
 		h.Set("Content-Type", "text/event-stream")
 
-		cl := make(client, o.bufSize)
-		o.connecting <- cl
+		cl := make(client, p.bufSize)
+		p.connecting <- cl
 
 		for {
 			select {
-			case <-done:
-				o.disconnecting <- cl
+			case <-r.Context().Done():
+				p.disconnecting <- cl
 				return
 
-			case event := <-cl:
-				// send webui success notification type sent
-				_, _ = w.Write(event)
+			case e := <-cl:
+				_, _ = w.Write(e)
 				fl.Flush()
 			}
 		}
 	}
-}
-
-func (o *Publisher) listen(events <-chan []byte) {
-	go func() {
-		for {
-			select {
-			case cl := <-o.connecting:
-				o.clients[cl] = true
-
-			case cl := <-o.disconnecting:
-				delete(o.clients, cl)
-
-			case event := <-events:
-				msg := format(fmt.Sprintf("%d", o.eventCounter), "message", event)
-				o.eventCounter++
-				for cl := range o.clients {
-					cl <- msg.Bytes()
-				}
-			}
-		}
-	}()
 }
 
 func format(id, event string, data []byte) *bytes.Buffer {

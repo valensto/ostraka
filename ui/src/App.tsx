@@ -20,9 +20,10 @@ export default function App() {
         const sync = syncEvents((event: MessageEvent) => {
             const data = JSON.parse(event.data) as Event
 
+            console.log(data)
             setWorkflows(prevState => {
                 return prevState.map((workflow) => {
-                    if (workflow.slug === data.workflow_slug) {
+                    if (workflow.slug === data.workflow) {
                         return {
                             ...workflow,
                             events: [...workflow.events, data]

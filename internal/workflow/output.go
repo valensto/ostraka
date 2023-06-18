@@ -1,72 +1,48 @@
 package workflow
 
 import (
-	"encoding/json"
 	"fmt"
+	"github.com/valensto/ostraka/internal/event"
+	"github.com/valensto/ostraka/internal/provider"
 )
 
 type Output struct {
-	Name        string
-	Destination Destination
-	Condition   *Condition
-	params      any
+	Name      string
+	Condition *Condition
+	Encoder   *event.Encoder
+
+	Publisher provider.Publisher
 }
 
-func UnmarshallOutput(name, destination string, condition *Condition, params any) (*Output, error) {
+func UnmarshallOutput(name, dst string, condition *Condition, encoder *event.Encoder, params any, opts provider.Options) (*Output, error) {
 	if name == "" {
 		return nil, fmt.Errorf("output name is empty")
 	}
 
-	dest, err := getDestination(destination)
+	publisher, err := provider.NewPublisher(dst, params, opts)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error creating publisher for output %s got: %w", name, err)
 	}
 
-	o := Output{
-		Name:        name,
-		Destination: dest,
-		Condition:   condition,
-		params:      params,
-	}
-
-	err = o.unmarshallParams()
-	if err != nil {
-		return nil, err
-	}
-
-	return &o, nil
-}
-
-func WebUIOutput() *Output {
 	return &Output{
-		Name:        "webui",
-		Destination: SSE,
-		params: SSEParams{
-			Endpoint: "/webui/consume",
-		},
-	}
+		Name:      name,
+		Condition: condition,
+		Encoder:   encoder,
+
+		Publisher: publisher,
+	}, nil
 }
 
-func (o *Output) unmarshallParams() error {
-	marshalled, err := json.Marshal(o.params)
+func (o *Output) Publish(event event.Payload) ([]byte, error) {
+	if !o.Condition.Match(event) {
+		return nil, fmt.Errorf("event does not match output %s condition", o.Name)
+	}
+
+	b, err := o.Encoder.Encode(event)
 	if err != nil {
-		return fmt.Errorf("error marshalling output params: %w", err)
+		return nil, fmt.Errorf("error encoding event for output %s got: %w", o.Name, err)
 	}
 
-	var params parameter
-	switch o.Destination {
-	case SSE:
-		var sse SSEParams
-		err = unmarshalParams(marshalled, &sse)
-		if err != nil {
-			return err
-		}
-
-		params = sse
-	default:
-		return fmt.Errorf("unknown output type: %s", o.Destination)
-	}
-
-	o.params = params
-	return params.validate()
+	o.Publisher.Publish(b)
+	return b, nil
 }
