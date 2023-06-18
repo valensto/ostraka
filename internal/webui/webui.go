@@ -1,11 +1,13 @@
 package webui
 
 import (
-	"github.com/valensto/ostraka/internal/collector"
+	"fmt"
+	"github.com/go-chi/chi/v5"
 	"github.com/valensto/ostraka/internal/config/env"
-	"github.com/valensto/ostraka/internal/event"
 	ostraHTTP "github.com/valensto/ostraka/internal/http"
 	"github.com/valensto/ostraka/internal/logger"
+	"github.com/valensto/ostraka/internal/middleware"
+	"github.com/valensto/ostraka/internal/provider/sse"
 	"github.com/valensto/ostraka/internal/workflow"
 	"golang.org/x/crypto/bcrypt"
 	"html/template"
@@ -15,29 +17,47 @@ import (
 
 type Webui struct {
 	server *ostraHTTP.Server
-	events chan event.Payload
 	config env.Webui
+
+	publisher *sse.Publisher
 }
 
 func New(config env.Webui, server *ostraHTTP.Server, workflows []*workflow.Workflow) (*Webui, error) {
-	webui := &Webui{
-		server: server,
-		events: make(chan event.Payload),
-		config: config,
+	mux := chi.NewRouter()
+	publisher, err := sse.WebUIPublisher(config, server)
+	if err != nil {
+		return nil, fmt.Errorf("cannot create webui publisher: %w", err)
 	}
 
+	webui := &Webui{
+		server:    server,
+		config:    config,
+		publisher: publisher,
+	}
+
+	cors := &middleware.CORS{
+		AllowedOrigins: config.AllowedOrigins,
+		AllowedMethods: []string{"GET", "POST"},
+	}
+	mux.Use(cors.Init().Handler)
 	server.Router.Handle("/assets/*", http.StripPrefix("/assets/", http.FileServer(http.Dir("ui/dist/assets"))))
-	server.Router.Get("/webui/dashboard", webui.basicAuth(webui.dashboard()))
-	server.Router.Get("/webui/workflows", webui.workflows(workflows))
+	mux.Get("/dashboard", webui.basicAuth(webui.dashboard()))
+	mux.Get("/workflows", webui.workflows(workflows))
 
-	logger.Get().Info().Msgf("views running on %s:%s/ui/dashboard", webui.server.Host, webui.server.Port)
+	server.Router.Mount("/webui", mux)
 
-	/*return webui, sse.WebUIPublisher(config).Publish(webui.events, server)*/
+	logger.Get().Info().Msgf("views running on %s:%s/webui/dashboard", webui.server.Host, webui.server.Port)
 	return webui, nil
 }
 
-func (webui *Webui) Consume(event collector.Event) {
-	webui.events <- event.ToMap()
+func (webui *Webui) Consume(entry workflow.Entry) {
+	b, err := entry.JSONEncode()
+	if err != nil {
+		logger.Get().Error().Msgf("error encoding entry %s got: %s", entry.Id, err.Error())
+		return
+	}
+
+	webui.publisher.Publish(b)
 }
 
 func (webui *Webui) basicAuth(handler http.Handler) http.HandlerFunc {

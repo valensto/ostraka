@@ -4,16 +4,19 @@ import (
 	"fmt"
 	"github.com/go-playground/validator/v10"
 	"github.com/valensto/ostraka/internal/event"
-	middleware2 "github.com/valensto/ostraka/internal/middleware"
+	"github.com/valensto/ostraka/internal/http"
+	"github.com/valensto/ostraka/internal/middleware"
+	provider "github.com/valensto/ostraka/internal/provider"
 	"github.com/valensto/ostraka/internal/workflow"
-	"github.com/valensto/ostraka/internal/workflow/provider"
 	"gopkg.in/yaml.v3"
 )
 
-func BuildWorkflows(contentFile ContentFile) ([]*workflow.Workflow, error) {
+type ContentFile map[string][]byte
+
+func BuildWorkflows(contentFile ContentFile, server *http.Server) ([]*workflow.Workflow, error) {
 	var wfs []*workflow.Workflow
 	for fn, content := range contentFile {
-		var sw workflowModel
+		var sw Workflow
 		err := yaml.Unmarshal(content, &sw)
 		if err != nil {
 			return nil, fmt.Errorf("error parsing YAML wf: %w in file %s", err, fn)
@@ -24,7 +27,7 @@ func BuildWorkflows(contentFile ContentFile) ([]*workflow.Workflow, error) {
 			return nil, fmt.Errorf("error: validating wf: %w in file %s", err, fn)
 		}
 
-		wf, err := sw.toWorkflow()
+		wf, err := sw.toWorkflow(server)
 		if err != nil {
 			return nil, fmt.Errorf("error: converting workflow: %w. In file: %s", err, fn)
 		}
@@ -35,8 +38,8 @@ func BuildWorkflows(contentFile ContentFile) ([]*workflow.Workflow, error) {
 	return wfs, nil
 }
 
-func (sw workflowModel) toWorkflow() (*workflow.Workflow, error) {
-	event, err := sw.EventType.toEvent()
+func (sw Workflow) toWorkflow(server *http.Server) (*workflow.Workflow, error) {
+	eventType, err := sw.EventType.toEventType()
 	if err != nil {
 		return nil, err
 	}
@@ -46,35 +49,40 @@ func (sw workflowModel) toWorkflow() (*workflow.Workflow, error) {
 		return nil, err
 	}
 
-	subscribers := make([]workflow.Subscriber, len(sw.Inputs))
+	opts := provider.Options{
+		Middlewares: middlewares,
+		Server:      server,
+	}
+
+	inputs := make([]*workflow.Input, len(sw.Inputs))
 	for i, si := range sw.Inputs {
-		subscribers[i], err = si.toSubscriber(event, middlewares)
+		inputs[i], err = si.toInput(eventType, opts)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	publishers := make([]workflow.Publisher, len(sw.Outputs))
+	outputs := make([]*workflow.Output, len(sw.Outputs))
 	for i, so := range sw.Outputs {
-		publishers[i], err = so.toPublisher(middlewares)
+		outputs[i], err = so.toOutput(opts)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	return workflow.New(sw.Name, subscribers, publishers)
+	return workflow.New(sw.Name, inputs, outputs)
 }
 
-func (ms middlewares) toMiddleware() (*middleware2.Middlewares, error) {
-	middlewares := &middleware2.Middlewares{
-		HTTP: middleware2.HTTP{
-			CORS:           make(map[string]middleware2.CORS, len(ms.CORS)),
-			Authenticators: make(map[string]middleware2.Authenticator, len(ms.Auth)),
+func (ms Middlewares) toMiddleware() (*middleware.Middlewares, error) {
+	middlewares := &middleware.Middlewares{
+		HTTP: middleware.HTTP{
+			CORS:           make(map[string]middleware.CORS, len(ms.CORS)),
+			Authenticators: make(map[string]middleware.Authenticator, len(ms.Auth)),
 		},
 	}
 
 	for _, ma := range ms.Auth {
-		a, err := middleware2.NewAuthentication(middleware2.Auth{
+		a, err := middleware.NewAuthentication(middleware.Auth{
 			Type:   ma.Type,
 			Params: ma.Params,
 		})
@@ -86,7 +94,7 @@ func (ms middlewares) toMiddleware() (*middleware2.Middlewares, error) {
 	}
 
 	for _, mc := range ms.CORS {
-		c, err := middleware2.NewCORS(
+		c, err := middleware.NewCORS(
 			mc.AllowedOrigins,
 			mc.AllowedMethods,
 			mc.AllowedHeaders,
@@ -103,7 +111,7 @@ func (ms middlewares) toMiddleware() (*middleware2.Middlewares, error) {
 	return middlewares, nil
 }
 
-func (sc condition) toCondition() (*workflow.Condition, error) {
+func (sc Condition) toCondition() (*workflow.Condition, error) {
 	cs := make([]*workflow.Condition, len(sc.Conditions))
 	for i, c := range sc.Conditions {
 		nc, err := c.toCondition()
@@ -116,7 +124,7 @@ func (sc condition) toCondition() (*workflow.Condition, error) {
 	return workflow.NewCondition(sc.Field, sc.Operator, sc.Value, cs...)
 }
 
-func (se event) toEvent() (*event.Type, error) {
+func (se EventType) toEventType() (*event.Type, error) {
 	fields := make([]event.Field, len(se.Fields))
 	for i, sf := range se.Fields {
 		f, err := event.UnmarshallField(sf.Name, sf.DataType, sf.Required)
@@ -130,7 +138,7 @@ func (se event) toEvent() (*event.Type, error) {
 	return event.UnmarshallType(se.Format, fields...)
 }
 
-func (si input) toSubscriber(event *event.Type, middlewares *middleware2.Middlewares) (workflow.Subscriber, error) {
+func (si Input) toInput(t *event.Type, opts provider.Options) (*workflow.Input, error) {
 	mappers := make([]event.Mapper, len(si.Decoder.Mappers))
 	for _, sm := range si.Decoder.Mappers {
 		mappers = append(mappers, event.Mapper{
@@ -139,20 +147,20 @@ func (si input) toSubscriber(event *event.Type, middlewares *middleware2.Middlew
 		})
 	}
 
-	decoder, err := event.UnmarshallDecoder(si.Decoder.Format, mappers, event)
+	decoder, err := event.UnmarshallDecoder(si.Decoder.Format, mappers, t)
 	if err != nil {
 		return nil, fmt.Errorf("error converting decoder yaml: %w", err)
 	}
 
-	input, err := workflow.UnmarshallInput(si.Name, si.Source, *decoder)
+	input, err := workflow.UnmarshallInput(si.Name, si.Source, decoder, si.Params, opts)
 	if err != nil {
 		return nil, fmt.Errorf("error converting input yaml: %w", err)
 	}
 
-	return provider.NewSubscriber(input, si.Params, middlewares)
+	return input, nil
 }
 
-func (so output) toPublisher(middlewares *middleware2.Middlewares) (workflow.Publisher, error) {
+func (so Output) toOutput(opts provider.Options) (*workflow.Output, error) {
 	var condition *workflow.Condition
 	if so.Condition != nil {
 		c, err := so.Condition.toCondition()
@@ -163,10 +171,15 @@ func (so output) toPublisher(middlewares *middleware2.Middlewares) (workflow.Pub
 		condition = c
 	}
 
-	output, err := workflow.UnmarshallOutput(so.Name, so.Destination, condition)
+	encoder, err := event.UnmarshalEncoder()
+	if err != nil {
+		return nil, fmt.Errorf("error converting encoder yaml: %w", err)
+	}
+
+	output, err := workflow.UnmarshallOutput(so.Name, so.Destination, condition, encoder, so.Params, opts)
 	if err != nil {
 		return nil, fmt.Errorf("error converting output yaml: %w", err)
 	}
 
-	return provider.NewPublisher(output, so.Params, middlewares)
+	return output, nil
 }

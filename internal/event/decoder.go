@@ -8,7 +8,7 @@ import (
 type Decoder struct {
 	format    Format
 	mappers   []Mapper
-	eventType Type
+	eventType *Type
 }
 
 type Mapper struct {
@@ -16,7 +16,7 @@ type Mapper struct {
 	Target string
 }
 
-func UnmarshallDecoder(format string, mappers []Mapper, eventType Type) (*Decoder, error) {
+func UnmarshallDecoder(format string, mappers []Mapper, eventType *Type) (*Decoder, error) {
 	f, err := getFormat(format)
 	if err != nil {
 		return nil, err

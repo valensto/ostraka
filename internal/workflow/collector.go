@@ -1,6 +1,8 @@
 package workflow
 
 import (
+	"encoding/json"
+	"fmt"
 	"github.com/google/uuid"
 	"time"
 )
@@ -11,46 +13,63 @@ type consumer interface {
 
 type collector struct {
 	consumers []consumer
-	entries   map[*Input]Entry
+	buffer    Entry
+	entries   []Entry
 }
 
-func (c *collector) dump() {
+func (c *collector) consumes() {
 	if len(c.consumers) == 0 {
 		return
 	}
 
 	for _, consumer := range c.consumers {
 		for _, entry := range c.entries {
-			go consumer.Consume(entry)
+			consumer.Consume(entry)
 		}
 	}
 }
 
-func (wf *Workflow) newCollector(from *Input, data []byte) collector {
-	col := make(map[*Input]Entry)
-
-	e := Entry{
+func (wf *Workflow) collect(input *Input, bytes []byte) collector {
+	entry := Entry{
 		Id:       uuid.NewString(),
 		Workflow: wf.Slug,
 		From: source{
-			Provider: "from.Source",
-			Name:     from.Name,
-			Data:     string(data),
+			Name:     input.Name,
+			Provider: input.Subscriber.Provider(),
+			Data:     string(bytes),
 		},
 		State:       succeed,
 		CollectedAt: time.Now().UTC(),
-		Message:     "event sent successfully",
+		Message:     "event received and decoded successfully",
 	}
 
-	col[from] = e
 	return collector{
 		consumers: wf.consumers,
-		entries:   col,
+		buffer:    entry,
 	}
 }
 
-func (c Entry) send() {
+func (c *collector) withError(err error) {
+	if err != nil {
+		c.buffer.State = failed
+		c.buffer.Message = err.Error()
+	}
+}
 
+func (c *collector) addOutput(output *Output, bytes []byte, err error) {
+	if err != nil {
+		c.withError(err)
+	}
+
+	entry := c.buffer
+	entry.Id = uuid.NewString()
+	entry.To = source{
+		Name:     output.Name,
+		Provider: output.Publisher.Provider(),
+		Data:     string(bytes),
+	}
+
+	c.entries = append(c.entries, entry)
 }
 
 type (
@@ -73,7 +92,15 @@ type Entry struct {
 }
 
 type source struct {
-	Provider string `json:"provider"`
 	Name     string `json:"name"`
+	Provider string `json:"provider"`
 	Data     string `json:"data"`
+}
+
+func (e Entry) JSONEncode() ([]byte, error) {
+	b, ok := json.Marshal(e)
+	if ok != nil {
+		return nil, fmt.Errorf("error marshalling eventType to json: %w", ok)
+	}
+	return b, nil
 }

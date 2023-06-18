@@ -42,6 +42,10 @@ func (s *Subscriber) Subscribe(events chan<- []byte) error {
 	return nil
 }
 
+func (s *Subscriber) Provider() string {
+	return MQTT
+}
+
 func (s *Subscriber) eventPubHandler(events chan<- []byte) mqtt.MessageHandler {
 	return func(client mqtt.Client, msg mqtt.Message) {
 		logger.Get().Info().Msgf("Received message: %s from topic: %s", msg.Payload(), msg.Topic())

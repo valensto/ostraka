@@ -33,7 +33,7 @@ func UnmarshallInput(name, source string, decoder *event.Decoder, params any, op
 	}, nil
 }
 
-func (i *Input) listen(dispatch func(from *Input, data []byte)) error {
+func (i *Input) listen(dispatch func(from *Input, bytes []byte)) error {
 	go func() {
 		for {
 			select {

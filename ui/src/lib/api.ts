@@ -13,7 +13,7 @@ export const getWorkflows = async (): Promise<Workflow[]> => {
 }
 
 export function syncEvents(onMessage: (event: MessageEvent) => void): EventSource | null {
-    const eventSource = new EventSource(`${BASE_URL}/webui/consume`);
+    const eventSource = new EventSource(`${BASE_URL}/webui/consumes?token=2dc7929e5b589cb7861bcae19e13ad96`);
     eventSource.onmessage = onMessage;
     return eventSource;
 }

@@ -12,10 +12,12 @@ import (
 
 type Subscriber interface {
 	Subscribe(event chan<- []byte) error
+	Provider() string
 }
 
 type Publisher interface {
 	Publish(b []byte)
+	Provider() string
 }
 
 type Options struct {

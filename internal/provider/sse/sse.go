@@ -78,6 +78,10 @@ func NewPublisher(params []byte, s *http.Server, middlewares *middleware.Middlew
 	return &publisher, nil
 }
 
+func (p *Publisher) Provider() string {
+	return SSE
+}
+
 func (p *Publisher) Publish(b []byte) {
 	msg := format(fmt.Sprintf("%d", p.eventCounter), "message", b)
 	p.eventCounter++

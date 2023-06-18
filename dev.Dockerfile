@@ -1,5 +1,5 @@
 FROM node:18.16.0 as webui
-ENV WEBUI_DIR /src/webui
+ENV WEBUI_DIR /src/ui
 
 RUN mkdir -p $WEBUI_DIR
 COPY ui/ $WEBUI_DIR/
@@ -14,7 +14,7 @@ RUN apk update && apk add --no-cache git
 RUN go install github.com/cespare/reflex@latest
 
 RUN rm -rf /ostraka/ui/dist/
-COPY --from=webui /src/webui/dist/ /ostraka/webui/dist/
+COPY --from=webui /src/ui/dist/ /ostraka/ui/dist/
 
 COPY scripts/run.sh /
 COPY scripts/test.sh /

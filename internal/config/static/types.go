@@ -1,4 +1,4 @@
-package config
+package static
 
 type Workflow struct {
 	Name string `yaml:"name" validate:"required"`

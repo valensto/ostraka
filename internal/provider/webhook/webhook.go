@@ -48,6 +48,10 @@ func NewSubscriber(params []byte, server *http.Server, middlewares *middleware.M
 	return &s, nil
 }
 
+func (s *Subscriber) Provider() string {
+	return Webhook
+}
+
 func (s *Subscriber) Subscribe(events chan<- []byte) error {
 	endpoint := http.Endpoint{
 		Method:  http.POST,

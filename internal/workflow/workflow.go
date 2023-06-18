@@ -15,7 +15,7 @@ type Workflow struct {
 	consumers []consumer
 }
 
-func New(name string, inputs []*Input, output []*Output, consumers ...consumer) (*Workflow, error) {
+func New(name string, inputs []*Input, output []*Output) (*Workflow, error) {
 	if name == "" {
 		return nil, fmt.Errorf("workflow name is empty")
 	}
@@ -26,14 +26,14 @@ func New(name string, inputs []*Input, output []*Output, consumers ...consumer) 
 
 		Inputs:  inputs,
 		Outputs: output,
-
-		consumers: consumers,
 	}
 
 	return &wf, nil
 }
 
-func (wf *Workflow) Listen() error {
+func (wf *Workflow) Listen(consumers ...consumer) error {
+	wf.consumers = consumers
+
 	for _, input := range wf.Inputs {
 		err := input.listen(wf.dispatch)
 		if err != nil {
@@ -44,20 +44,18 @@ func (wf *Workflow) Listen() error {
 	return nil
 }
 
-func (wf *Workflow) dispatch(from *Input, data []byte) {
-	c := wf.newCollector(from, data)
-	defer c.dump()
+func (wf *Workflow) dispatch(from *Input, bytes []byte) {
+	collect := wf.collect(from, bytes)
+	defer collect.consumes()
 
-	e, err := from.Decoder.Decode(data)
+	payload, err := from.Decoder.Decode(bytes)
 	if err != nil {
-		c.dump()
+		collect.withError(err)
 		return
 	}
 
 	for _, output := range wf.Outputs {
-		err := output.Publish(e)
-		if err != nil {
-			c.addError(err)
-		}
+		b, err := output.Publish(payload)
+		collect.addOutput(output, b, err)
 	}
 }

@@ -2,24 +2,24 @@ package sse
 
 import (
 	"github.com/valensto/ostraka/internal/config/env"
-	middleware2 "github.com/valensto/ostraka/internal/middleware"
+	"github.com/valensto/ostraka/internal/http"
+	"github.com/valensto/ostraka/internal/middleware"
 )
 
-func WebUIPublisher(config env.Webui) *Publisher {
-	return &Publisher{
+func WebUIPublisher(config env.Webui, server *http.Server) (*Publisher, error) {
+	p := &Publisher{
+		server: server,
 		params: &Params{
-			Endpoint: "/views/consume",
+			Endpoint: "/webui/consumes",
 		},
-		authenticator: &middleware2.Token{
+		authenticator: &middleware.Token{
 			Token:      config.AuthToken,
 			QueryParam: "token",
 		},
-		cors: &middleware2.CORS{
-			AllowedOrigins:   config.AllowedOrigins,
-			AllowedMethods:   []string{"GET"},
-			AllowedHeaders:   nil,
-			AllowCredentials: false,
-			MaxAge:           3000,
+
+		cors: &middleware.CORS{
+			AllowedOrigins: config.AllowedOrigins,
+			AllowedMethods: []string{"GET", "POST"},
 		},
 		clients:       make(map[client]bool),
 		connecting:    make(chan client),
@@ -27,4 +27,20 @@ func WebUIPublisher(config env.Webui) *Publisher {
 		bufSize:       2,
 		eventCounter:  0,
 	}
+
+	endpoint := http.Endpoint{
+		Method:  http.GET,
+		Path:    p.params.Endpoint,
+		Cors:    p.cors,
+		Handler: p.endpoint(),
+		Auth:    p.authenticator,
+	}
+
+	err := server.AddSubRouter(endpoint)
+	if err != nil {
+		return nil, err
+	}
+
+	p.listenConn()
+	return p, nil
 }

@@ -2,22 +2,20 @@ package local
 
 import (
 	"fmt"
-	"github.com/go-playground/validator/v10"
-	"github.com/valensto/ostraka/internal/config"
+	"github.com/valensto/ostraka/internal/config/static"
 	"github.com/valensto/ostraka/internal/logger"
-	"gopkg.in/yaml.v3"
 	"io"
 	"os"
 	"path/filepath"
 )
 
-func Extract(source string) ([]config.Workflow, error) {
+func Extract(source string) (static.ContentFile, error) {
 	dir, err := os.ReadDir(source)
 	if err != nil {
 		return nil, fmt.Errorf("error reading resources directory: %w", err)
 	}
 
-	workflows := make([]config.Workflow, 0, len(dir))
+	contentFile := make(static.ContentFile)
 	for _, file := range dir {
 		fn := file.Name()
 
@@ -27,24 +25,15 @@ func Extract(source string) ([]config.Workflow, error) {
 			continue
 		}
 
-		wf, err := extractBytes(filepath.Join(source, fn))
+		b, err := extractBytes(filepath.Join(source, fn))
 		if err != nil {
 			return nil, fmt.Errorf("error extracting workflow: %w", err)
 		}
 
-		var cw config.Workflow
-		err = yaml.Unmarshal(wf, &cw)
-		if err != nil {
-			return nil, fmt.Errorf("error parsing YAML wf: %w in file %s", err, fn)
-		}
-
-		err = validator.New().Struct(cw)
-		if err != nil {
-			return nil, fmt.Errorf("error: validating wf: %w in file %s", err, fn)
-		}
+		contentFile[fn] = b
 	}
 
-	return workflows, nil
+	return contentFile, nil
 }
 
 func extractBytes(filename string) ([]byte, error) {

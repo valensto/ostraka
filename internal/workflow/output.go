@@ -33,16 +33,16 @@ func UnmarshallOutput(name, dst string, condition *Condition, encoder *event.Enc
 	}, nil
 }
 
-func (o *Output) Publish(event event.Payload) error {
+func (o *Output) Publish(event event.Payload) ([]byte, error) {
 	if !o.Condition.Match(event) {
-		return fmt.Errorf("event does not match output %s condition", o.Name)
+		return nil, fmt.Errorf("event does not match output %s condition", o.Name)
 	}
 
 	b, err := o.Encoder.Encode(event)
 	if err != nil {
-		return fmt.Errorf("error encoding event for output %s got: %w", o.Name, err)
+		return nil, fmt.Errorf("error encoding event for output %s got: %w", o.Name, err)
 	}
 
 	o.Publisher.Publish(b)
-	return nil
+	return b, nil
 }

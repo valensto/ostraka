@@ -8,7 +8,7 @@ export interface Workflow {
 
 export interface Event {
     id: string;
-    workflow_slug: string;
+    workflow: string;
     from: Source;
     to: Source;
     state: "succeed" | "failed";

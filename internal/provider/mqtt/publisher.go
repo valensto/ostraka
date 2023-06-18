@@ -29,6 +29,10 @@ func NewPublisher(params []byte) (*Publisher, error) {
 	return &publisher, nil
 }
 
+func (p *Publisher) Provider() string {
+	return MQTT
+}
+
 func (p *Publisher) Publish(b []byte) {
 	l := logger.Get()
 	token := p.client.Publish(p.instance.params.Topic, 1, false, b)
