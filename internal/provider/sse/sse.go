@@ -46,19 +46,19 @@ func NewPublisher(params []byte, s *http.Server, middlewares *middleware.Middlew
 		eventCounter:  0,
 	}
 
-	if p.Auth != "" {
-		publisher.authenticator, err = middlewares.HTTP.Authenticator(p.Auth)
-		if err != nil {
-			return nil, err
+	/*	if p.Auth != "" {
+			publisher.authenticator, err = middlewares.HTTP.Authenticator(p.Auth)
+			if err != nil {
+				return nil, err
+			}
 		}
-	}
 
-	if p.CORS != "" {
-		publisher.cors, err = middlewares.HTTP.Cors(p.CORS)
-		if err != nil {
-			return nil, err
-		}
-	}
+		if p.CORS != "" {
+			publisher.cors, err = middlewares.HTTP.Cors(p.CORS)
+			if err != nil {
+				return nil, err
+			}
+		}*/
 
 	endpoint := http.Endpoint{
 		Method:  http.GET,
@@ -76,10 +76,6 @@ func NewPublisher(params []byte, s *http.Server, middlewares *middleware.Middlew
 	publisher.listenConn()
 	logger.Get().Info().Msgf("publisher of type SSE registered. Sending to endpoint %s", publisher.params.Endpoint)
 	return &publisher, nil
-}
-
-func (p *Publisher) Provider() string {
-	return SSE
 }
 
 func (p *Publisher) Publish(b []byte) {

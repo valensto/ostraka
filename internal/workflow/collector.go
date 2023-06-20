@@ -29,13 +29,13 @@ func (c *collector) consumes() {
 	}
 }
 
-func (wf *Workflow) collect(input *Input, bytes []byte) collector {
+func (wf *Workflow) collect(input *input, bytes []byte) collector {
 	entry := Entry{
 		Id:       uuid.NewString(),
 		Workflow: wf.Slug,
 		From: source{
 			Name:     input.Name,
-			Provider: input.Subscriber.Provider(),
+			Provider: input.Source,
 			Data:     string(bytes),
 		},
 		State:       succeed,
@@ -44,7 +44,7 @@ func (wf *Workflow) collect(input *Input, bytes []byte) collector {
 	}
 
 	return collector{
-		consumers: wf.consumers,
+		consumers: nil,
 		buffer:    entry,
 	}
 }
@@ -56,7 +56,7 @@ func (c *collector) withError(err error) {
 	}
 }
 
-func (c *collector) addOutput(output *Output, bytes []byte, err error) {
+func (c *collector) addOutput(output *output, bytes []byte, err error) {
 	if err != nil {
 		c.withError(err)
 	}
@@ -65,7 +65,7 @@ func (c *collector) addOutput(output *Output, bytes []byte, err error) {
 	entry.Id = uuid.NewString()
 	entry.To = source{
 		Name:     output.Name,
-		Provider: output.Publisher.Provider(),
+		Provider: output.Destination,
 		Data:     string(bytes),
 	}
 

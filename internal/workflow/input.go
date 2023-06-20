@@ -2,38 +2,53 @@ package workflow
 
 import (
 	"fmt"
-	"github.com/valensto/ostraka/internal/event"
 	"github.com/valensto/ostraka/internal/provider"
 )
 
-type Input struct {
-	Name    string
-	Decoder *event.Decoder
+type input struct {
+	Name    string  `json:"name" yaml:"name" validate:"required"`
+	Source  string  `json:"source" yaml:"source" validate:"required"`
+	Decoder decoder `json:"decoder" yaml:"decoder" validate:"dive,required"`
+	Params  any     `json:"params" yaml:"params" validate:"required"`
 
-	Subscriber provider.Subscriber
+	subscriber provider.Subscriber
 	queue      chan []byte
 }
 
-func UnmarshallInput(name, source string, decoder *event.Decoder, params any, opts provider.Options) (*Input, error) {
-	if name == "" {
-		return nil, fmt.Errorf("input name is empty")
-	}
-
-	subscriber, err := provider.NewSubscriber(source, params, opts)
+func (i *input) loadSubscriber(opts provider.Options) error {
+	s, err := provider.NewSubscriber(i.Source, i.Params, opts)
 	if err != nil {
-		return nil, fmt.Errorf("error creating subscriber for output %s got: %w", name, err)
+		return err
 	}
 
-	return &Input{
-		Name:    name,
-		Decoder: decoder,
-
-		Subscriber: subscriber,
-		queue:      make(chan []byte),
-	}, nil
+	i.subscriber = s
+	return nil
 }
 
-func (i *Input) listen(dispatch func(from *Input, bytes []byte)) error {
+func (wf *Workflow) loadInputs(opts provider.Options) error {
+	for i, _ := range wf.Inputs {
+		if err := wf.Inputs[i].loadSubscriber(opts); err != nil {
+			return fmt.Errorf("error unmarshalling input %s got: %w", wf.Inputs[i].Name, err)
+		}
+
+		err := wf.Inputs[i].subscribe(wf.dispatch)
+		if err != nil {
+			return fmt.Errorf("error subscribing to input %s got: %w", wf.Inputs[i].Name, err)
+		}
+
+		wf.Inputs[i].Decoder.eventType = wf.EventType
+	}
+
+	return nil
+}
+
+func (i *input) subscribe(dispatch func(from *input, bytes []byte)) error {
+	if i.subscriber == nil {
+		return fmt.Errorf("input %s is not initialized", i.Name)
+	}
+
+	i.queue = make(chan []byte)
+
 	go func() {
 		for {
 			select {
@@ -43,5 +58,5 @@ func (i *Input) listen(dispatch func(from *Input, bytes []byte)) error {
 		}
 	}()
 
-	return i.Subscriber.Subscribe(i.queue)
+	return i.subscriber.Subscribe(i.queue)
 }

@@ -31,25 +31,21 @@ func NewSubscriber(params []byte, server *http.Server, middlewares *middleware.M
 		cors:          nil,
 	}
 
-	if p.Auth != "" {
-		s.authenticator, err = middlewares.HTTP.Authenticator(p.Auth)
-		if err != nil {
-			return nil, err
+	/*	if p.Auth != "" {
+			s.authenticator, err = middlewares.HTTP.Authenticator(p.Auth)
+			if err != nil {
+				return nil, err
+			}
 		}
-	}
 
-	if p.CORS != "" {
-		s.cors, err = middlewares.HTTP.Cors(p.CORS)
-		if err != nil {
-			return nil, err
-		}
-	}
+		if p.CORS != "" {
+			s.cors, err = middlewares.HTTP.Cors(p.CORS)
+			if err != nil {
+				return nil, err
+			}
+		}*/
 
 	return &s, nil
-}
-
-func (s *Subscriber) Provider() string {
-	return Webhook
 }
 
 func (s *Subscriber) Subscribe(events chan<- []byte) error {

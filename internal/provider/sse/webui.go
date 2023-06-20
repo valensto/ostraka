@@ -1,7 +1,7 @@
 package sse
 
 import (
-	"github.com/valensto/ostraka/internal/config/env"
+	"github.com/valensto/ostraka/internal/env"
 	"github.com/valensto/ostraka/internal/http"
 	"github.com/valensto/ostraka/internal/middleware"
 )

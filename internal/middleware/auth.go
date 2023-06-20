@@ -12,8 +12,8 @@ const (
 )
 
 type Auth struct {
-	Type   string `json:"type"`
-	Params any    `json:"params"`
+	Type   string `json:"type" yaml:"type" validate:"required"`
+	Params any    `json:"params" yaml:"params" validate:"required"`
 }
 
 type Authenticator interface {

@@ -2,12 +2,12 @@ package main
 
 import (
 	"fmt"
-	"github.com/valensto/ostraka/internal/config/env"
-	"github.com/valensto/ostraka/internal/config/static"
-	"github.com/valensto/ostraka/internal/config/static/local"
+	"github.com/valensto/ostraka/internal/env"
+	"github.com/valensto/ostraka/internal/extractor/static/local"
 	"github.com/valensto/ostraka/internal/http"
 	"github.com/valensto/ostraka/internal/logger"
 	"github.com/valensto/ostraka/internal/webui"
+	"github.com/valensto/ostraka/internal/workflow"
 )
 
 func main() {
@@ -20,28 +20,19 @@ func main() {
 func run() error {
 	config := env.Load()
 	server := http.New(config)
+	extractor := local.New(".ostraka/workflows")
 
-	contentFile, err := local.Extract(".ostraka/workflows")
-	if err != nil {
-		return fmt.Errorf("cannot extract content file: %w", err)
-	}
-
-	workflows, err := static.BuildWorkflows(contentFile, server)
-	if err != nil {
-		return fmt.Errorf("cannot build workflows: %w", err)
-	}
-
-	uiConsumer, err := webui.New(config.Webui, server, workflows)
+	ui, err := webui.New(config.Webui, server)
 	if err != nil {
 		return fmt.Errorf("cannot create webui: %w", err)
 	}
 
-	for _, wf := range workflows {
-		err := wf.Listen(uiConsumer)
-		if err != nil {
-			return fmt.Errorf("cannot listen workflow %s: %w", wf.Name, err)
-		}
+	builder := workflow.NewBuilder(extractor, server, ui)
+	workflows, err := builder.Build()
+	if err != nil {
+		return err
 	}
 
-	return server.Run()
+	ui.Serve(workflows)
+	return server.Serve()
 }
