@@ -50,6 +50,7 @@ func (webui *Webui) Serve(workflows []*workflow.Workflow) {
 	webui.server.Router.Handle("/assets/*", http.StripPrefix("/assets/", http.FileServer(http.Dir("ui/dist/assets"))))
 	mux.Get("/workflows", webui.workflows(workflows))
 	mux.Get("/dashboard", webui.basicAuth(webui.dashboard()))
+
 	webui.server.Router.Mount("/webui", mux)
 }
 

@@ -45,14 +45,10 @@ func (b *Builder) Build() ([]*Workflow, error) {
 			return nil, fmt.Errorf("error validating workflow %s: %w", ext, err)
 		}
 
-		for s, cors := range wf.Middlewares.CORS {
-			fmt.Println(s, cors)
-		}
-
 		wf.consumers = b.consumers
-		opts := provider.Options{
-			Middlewares: wf.Middlewares,
-			Server:      b.server,
+		opts, err := provider.NewOptions(b.server, wf.Middlewares)
+		if err != nil {
+			return nil, fmt.Errorf("error initializing workflow %s: %w", ext, err)
 		}
 
 		if err := wf.Init(opts); err != nil {

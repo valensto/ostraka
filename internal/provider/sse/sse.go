@@ -46,19 +46,19 @@ func NewPublisher(params []byte, s *http.Server, middlewares *middleware.Middlew
 		eventCounter:  0,
 	}
 
-	/*	if p.Auth != "" {
-			publisher.authenticator, err = middlewares.HTTP.Authenticator(p.Auth)
-			if err != nil {
-				return nil, err
-			}
+	if p.Auth != "" {
+		publisher.authenticator, err = middlewares.Authenticator(p.Auth)
+		if err != nil {
+			return nil, err
 		}
+	}
 
-		if p.CORS != "" {
-			publisher.cors, err = middlewares.HTTP.Cors(p.CORS)
-			if err != nil {
-				return nil, err
-			}
-		}*/
+	if p.CORS != "" {
+		publisher.cors, err = middlewares.Cors(p.CORS)
+		if err != nil {
+			return nil, err
+		}
+	}
 
 	endpoint := http.Endpoint{
 		Method:  http.GET,

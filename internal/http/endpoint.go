@@ -64,7 +64,6 @@ func (s *Server) AddSubRouter(endpoint Endpoint) error {
 	subRouter := chi.NewRouter()
 
 	if endpoint.Cors != nil {
-		fmt.Printf("cors %+v\n", endpoint.Cors)
 		subRouter.Use(endpoint.Cors.Init().Handler)
 	}
 

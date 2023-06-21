@@ -3,6 +3,7 @@ package sse
 import (
 	"github.com/valensto/ostraka/internal/env"
 	"github.com/valensto/ostraka/internal/http"
+	"github.com/valensto/ostraka/internal/logger"
 	"github.com/valensto/ostraka/internal/middleware"
 )
 
@@ -42,5 +43,6 @@ func WebUIPublisher(config env.Webui, server *http.Server) (*Publisher, error) {
 	}
 
 	p.listenConn()
+	logger.Get().Info().Msgf("publisher of type SSE registered. Sending to endpoint %s", p.params.Endpoint)
 	return p, nil
 }
