@@ -23,7 +23,6 @@ type Server struct {
 func New(config *env.Config) *Server {
 	mux := chi.NewRouter()
 	mux.Use(mid.Recoverer)
-	mux.Use(mid.Logger)
 
 	return &Server{
 		Router: mux,

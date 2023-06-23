@@ -2,43 +2,43 @@ package local
 
 import (
 	"fmt"
-	"github.com/valensto/ostraka/internal/extractor"
+	"github.com/valensto/ostraka/internal/config"
 	"github.com/valensto/ostraka/internal/logger"
 	"io"
 	"os"
 	"path/filepath"
 )
 
-type Extractor struct {
+type Provider struct {
 	source string
 }
 
-func New(source string) *Extractor {
-	return &Extractor{source: source}
+func New(source string) *Provider {
+	return &Provider{source: source}
 }
 
-func (e Extractor) Extract() (extractor.Files, error) {
-	dir, err := os.ReadDir(e.source)
+func (p Provider) Extract() (config.Files, error) {
+	dir, err := os.ReadDir(p.source)
 	if err != nil {
 		return nil, fmt.Errorf("error reading resources directory: %w", err)
 	}
 
-	contentFile := make(extractor.Files, len(dir))
+	contentFile := make(config.Files, len(dir))
 	for _, file := range dir {
 		fn := file.Name()
 
 		ext := filepath.Ext(fn)
-		if _, ok := extractor.LookupExtension(ext); !ok {
+		if _, ok := config.LookupExtension(ext); !ok {
 			logger.Get().Warn().Msgf(`file (%s) be skipped. No matching with authorized extensions (yaml | yml | json) found`, fn)
 			continue
 		}
 
-		b, err := extractBytes(filepath.Join(e.source, fn))
+		b, err := extractBytes(filepath.Join(p.source, fn))
 		if err != nil {
 			return nil, fmt.Errorf("error extracting workflow: %w", err)
 		}
 
-		contentFile[extractor.Extension(ext)] = b
+		contentFile[config.Extension(ext)] = b
 	}
 
 	return contentFile, nil

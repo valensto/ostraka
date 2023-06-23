@@ -8,20 +8,21 @@ import (
 type output struct {
 	Name        string     `json:"name" yaml:"name" validate:"required"`
 	Destination string     `json:"destination" yaml:"destination" validate:"required"`
-	Params      any        `json:"params" yaml:"params" validate:"required"`
 	Condition   *condition `json:"condition,omitempty" yaml:"condition,omitempty"`
 	Encoder     *encoder   `json:"encoder" yaml:"encoder"`
 
+	Params    any `json:"params" yaml:"params" validate:"required"`
 	publisher provider.Publisher
 }
 
 func (o *output) loadPublisher(opts provider.Options) error {
-	s, err := provider.NewPublisher(o.Destination, o.Params, opts)
+	publisher, err := provider.NewPublisher(o.Destination, o.Params, opts)
 	if err != nil {
 		return err
 	}
 
-	o.publisher = s
+	o.publisher = publisher
+	o.Params = nil
 	return nil
 }
 
@@ -41,6 +42,7 @@ func (wf *Workflow) loadOutputs(opts provider.Options) error {
 			c = uc
 		}
 
+		fmt.Printf("condition for output %s: %v\n", wf.Outputs[i].Name, c)
 		wf.Outputs[i].Condition = c
 	}
 

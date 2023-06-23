@@ -9,19 +9,20 @@ type input struct {
 	Name    string  `json:"name" yaml:"name" validate:"required"`
 	Source  string  `json:"source" yaml:"source" validate:"required"`
 	Decoder decoder `json:"decoder" yaml:"decoder" validate:"dive,required"`
-	Params  any     `json:"params" yaml:"params" validate:"required"`
 
+	Params     any `json:"params" yaml:"params" validate:"required"`
 	subscriber provider.Subscriber
 	queue      chan []byte
 }
 
 func (i *input) loadSubscriber(opts provider.Options) error {
-	s, err := provider.NewSubscriber(i.Source, i.Params, opts)
+	subscriber, err := provider.NewSubscriber(i.Source, i.Params, opts)
 	if err != nil {
 		return err
 	}
 
-	i.subscriber = s
+	i.subscriber = subscriber
+	i.Params = nil
 	return nil
 }
 

@@ -47,7 +47,7 @@ func (wf *Workflow) dispatch(from *input, ib []byte) {
 	for _, o := range wf.Outputs {
 		ob, err := o.publish(p)
 		if err != nil {
-			collect.withError(err)
+			collect.addOutput(o, ob, err)
 			continue
 		}
 

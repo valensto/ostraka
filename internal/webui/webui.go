@@ -7,6 +7,7 @@ import (
 	ostraHTTP "github.com/valensto/ostraka/internal/http"
 	"github.com/valensto/ostraka/internal/logger"
 	"github.com/valensto/ostraka/internal/middleware"
+	"github.com/valensto/ostraka/internal/provider"
 	"github.com/valensto/ostraka/internal/provider/sse"
 	"github.com/valensto/ostraka/internal/workflow"
 	"golang.org/x/crypto/bcrypt"
@@ -19,7 +20,7 @@ type Webui struct {
 	server *ostraHTTP.Server
 	config env.Webui
 
-	publisher *sse.Publisher
+	publisher provider.Publisher
 }
 
 func New(config env.Webui, server *ostraHTTP.Server) (*Webui, error) {

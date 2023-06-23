@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/google/uuid"
+	"github.com/valensto/ostraka/internal/logger"
 	"time"
 )
 
@@ -19,6 +20,7 @@ type collector struct {
 
 func (c *collector) consumes() {
 	if len(c.consumers) == 0 {
+		logger.Get().Debug().Msg("no consumers to consume")
 		return
 	}
 
@@ -44,7 +46,7 @@ func (wf *Workflow) collect(input *input, bytes []byte) collector {
 	}
 
 	return collector{
-		consumers: nil,
+		consumers: wf.consumers,
 		buffer:    entry,
 	}
 }
@@ -57,6 +59,9 @@ func (c *collector) withError(err error) {
 }
 
 func (c *collector) addOutput(output *output, bytes []byte, err error) {
+	c.buffer.State = succeed
+	c.buffer.Message = "event published successfully"
+
 	if err != nil {
 		c.withError(err)
 	}

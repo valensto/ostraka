@@ -3,33 +3,29 @@ package workflow
 import (
 	"fmt"
 	"github.com/go-playground/validator/v10"
-	"github.com/valensto/ostraka/internal/extractor"
+	"github.com/valensto/ostraka/internal/config"
 	"github.com/valensto/ostraka/internal/http"
 	"github.com/valensto/ostraka/internal/provider"
 )
 
-type Extractor interface {
-	Extract() (extractor.Files, error)
-}
-
 type Builder struct {
 	server    *http.Server
 	consumers []consumer
-	extractor Extractor
+	provider  config.Provider
 }
 
-func NewBuilder(extractor Extractor, server *http.Server, consumers ...consumer) *Builder {
+func NewBuilder(provider config.Provider, server *http.Server, consumers ...consumer) *Builder {
 	return &Builder{
 		server:    server,
 		consumers: consumers,
-		extractor: extractor,
+		provider:  provider,
 	}
 }
 
 func (b *Builder) Build() ([]*Workflow, error) {
 	validate := validator.New()
 
-	files, err := b.extractor.Extract()
+	files, err := b.provider.Extract()
 	if err != nil {
 		return nil, fmt.Errorf("error extracting workflows: %w", err)
 	}
@@ -54,6 +50,8 @@ func (b *Builder) Build() ([]*Workflow, error) {
 		if err := wf.Init(opts); err != nil {
 			return nil, fmt.Errorf("error initializing workflow %s: %w", ext, err)
 		}
+
+		workflows = append(workflows, &wf)
 	}
 
 	return workflows, nil

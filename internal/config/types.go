@@ -1,4 +1,4 @@
-package extractor
+package config
 
 import (
 	"encoding/json"
@@ -9,6 +9,10 @@ import (
 type (
 	Extension string
 	Files     map[Extension][]byte
+
+	Provider interface {
+		Extract() (Files, error)
+	}
 )
 
 var Extensions = map[Extension]struct{}{
