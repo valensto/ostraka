@@ -142,7 +142,7 @@ package workflow
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			o := Output{
+			o := output{
 				Name:        tt.fields.Name,
 				Destination: tt.fields.Type,
 				Params:      tt.fields.Params,

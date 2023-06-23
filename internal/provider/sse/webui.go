@@ -1,7 +1,7 @@
 package sse
 
 import (
-	"github.com/valensto/ostraka/internal/config/env"
+	"github.com/valensto/ostraka/internal/env"
 	"github.com/valensto/ostraka/internal/http"
 	"github.com/valensto/ostraka/internal/middleware"
 )
@@ -21,7 +21,7 @@ func WebUIPublisher(config env.Webui, server *http.Server) (*Publisher, error) {
 			AllowedOrigins: config.AllowedOrigins,
 			AllowedMethods: []string{"GET", "POST"},
 		},
-		clients:       make(map[client]bool),
+		clients:       make(map[client]struct{}),
 		connecting:    make(chan client),
 		disconnecting: make(chan client),
 		bufSize:       2,

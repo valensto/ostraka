@@ -9,18 +9,18 @@ import (
 )
 
 type JWT struct {
-	Header           string  `json:"header"`
-	Secret           string  `json:"secret"`
-	Algorithm        string  `json:"algorithm"`
-	VerifyExpiration bool    `json:"verify_expiration"`
-	MaxAge           int     `json:"max_age"`
-	Payload          []field `json:"payload"`
+	Header           string  `json:"header" yaml:"header" validate:"required"`
+	Secret           string  `json:"secret" yaml:"secret" validate:"required"`
+	Algorithm        string  `json:"algorithm" yaml:"algorithm" validate:"required"`
+	VerifyExpiration bool    `json:"verify_expiration" yaml:"verify_expiration"`
+	MaxAge           int     `json:"max_age" yaml:"max_age"`
+	Payload          []field `json:"payload" yaml:"payload" validate:"required"`
 }
 
 type field struct {
-	Name     string `json:"name"`
-	DataType string `json:"data_type"`
-	Required bool   `json:"required"`
+	Name     string `json:"name" yaml:"name" validate:"required"`
+	DataType string `json:"data_type" yaml:"dataType" validate:"required"`
+	Required bool   `json:"required" yaml:"required" validate:"required"`
 }
 
 func (config JWT) validate() error {

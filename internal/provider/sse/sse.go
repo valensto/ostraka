@@ -18,7 +18,7 @@ type Publisher struct {
 	authenticator middleware.Authenticator
 	cors          *middleware.CORS
 
-	clients       map[client]bool
+	clients       map[client]struct{}
 	connecting    chan client
 	disconnecting chan client
 	bufSize       uint
@@ -39,7 +39,7 @@ func NewPublisher(params []byte, s *http.Server, middlewares *middleware.Middlew
 		authenticator: nil,
 		cors:          nil,
 
-		clients:       make(map[client]bool),
+		clients:       make(map[client]struct{}),
 		connecting:    make(chan client),
 		disconnecting: make(chan client),
 		bufSize:       2,
@@ -47,14 +47,14 @@ func NewPublisher(params []byte, s *http.Server, middlewares *middleware.Middlew
 	}
 
 	if p.Auth != "" {
-		publisher.authenticator, err = middlewares.HTTP.Authenticator(p.Auth)
+		publisher.authenticator, err = middlewares.Authenticator(p.Auth)
 		if err != nil {
 			return nil, err
 		}
 	}
 
 	if p.CORS != "" {
-		publisher.cors, err = middlewares.HTTP.Cors(p.CORS)
+		publisher.cors, err = middlewares.Cors(p.CORS)
 		if err != nil {
 			return nil, err
 		}
@@ -74,33 +74,32 @@ func NewPublisher(params []byte, s *http.Server, middlewares *middleware.Middlew
 	}
 
 	publisher.listenConn()
-	logger.Get().Info().Msgf("publisher of type SSE registered. Sending to endpoint %s", publisher.params.Endpoint)
-	return &publisher, nil
-}
 
-func (p *Publisher) Provider() string {
-	return SSE
+	return &publisher, nil
 }
 
 func (p *Publisher) Publish(b []byte) {
 	msg := format(fmt.Sprintf("%d", p.eventCounter), "message", b)
 	p.eventCounter++
+
 	for cl := range p.clients {
 		cl <- msg.Bytes()
+		logger.Get().Info().Msgf("event published to endpoint %s", p.params.Endpoint)
 	}
-
-	logger.Get().Info().Msgf("event published to endpoint %s", p.params.Endpoint)
 }
 
 func (p *Publisher) listenConn() {
+	logger.Get().Info().Msgf("publisher of type SSE registered. Sending to endpoint %s", p.params.Endpoint)
 	go func() {
 		for {
 			select {
 			case cl := <-p.connecting:
-				p.clients[cl] = true
+				p.clients[cl] = struct{}{}
+				logger.Get().Info().Msgf("new SSE connection to endpoint %s", p.params.Endpoint)
 
 			case cl := <-p.disconnecting:
 				delete(p.clients, cl)
+				logger.Get().Info().Msgf("SSE connection closed to endpoint %s", p.params.Endpoint)
 			}
 		}
 	}()

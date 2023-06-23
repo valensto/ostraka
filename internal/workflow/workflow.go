@@ -2,60 +2,55 @@ package workflow
 
 import (
 	"fmt"
-	"github.com/gosimple/slug"
+	"github.com/valensto/ostraka/internal/middleware"
+	"github.com/valensto/ostraka/internal/provider"
 )
 
 type Workflow struct {
-	Name string
-	Slug string
+	Name string `json:"name" yaml:"name" validate:"required"`
+	Slug string `json:"-" yaml:"-"`
 
-	Inputs  []*Input
-	Outputs []*Output
+	EventType eventType `json:"event_type" yaml:"event_type" validate:"required,dive,required"`
+
+	Middlewares *middleware.Middlewares `json:"middlewares" yaml:"middlewares"`
+
+	Inputs  []*input  `json:"inputs" yaml:"inputs" validate:"required,dive,required"`
+	Outputs []*output `json:"outputs" yaml:"outputs" validate:"required,dive,required"`
 
 	consumers []consumer
 }
 
-func New(name string, inputs []*Input, output []*Output) (*Workflow, error) {
-	if name == "" {
-		return nil, fmt.Errorf("workflow name is empty")
+func (wf *Workflow) Init(opts provider.Options) error {
+	err := wf.loadInputs(opts)
+	if err != nil {
+		return fmt.Errorf("error unmarshalling inputs: %w", err)
 	}
 
-	wf := Workflow{
-		Name: name,
-		Slug: slug.Make(name),
-
-		Inputs:  inputs,
-		Outputs: output,
-	}
-
-	return &wf, nil
-}
-
-func (wf *Workflow) Listen(consumers ...consumer) error {
-	wf.consumers = consumers
-
-	for _, input := range wf.Inputs {
-		err := input.listen(wf.dispatch)
-		if err != nil {
-			return fmt.Errorf("error subscribing input %s got: %w", input.Name, err)
-		}
+	err = wf.loadOutputs(opts)
+	if err != nil {
+		return fmt.Errorf("error unmarshalling outputs: %w", err)
 	}
 
 	return nil
 }
 
-func (wf *Workflow) dispatch(from *Input, bytes []byte) {
-	collect := wf.collect(from, bytes)
+func (wf *Workflow) dispatch(from *input, ib []byte) {
+	collect := wf.collect(from, ib)
 	defer collect.consumes()
 
-	payload, err := from.Decoder.Decode(bytes)
+	p, err := from.Decoder.decode(ib)
 	if err != nil {
 		collect.withError(err)
 		return
 	}
 
-	for _, output := range wf.Outputs {
-		b, err := output.Publish(payload)
-		collect.addOutput(output, b, err)
+	for _, o := range wf.Outputs {
+		ob, err := o.publish(p)
+		if err != nil {
+			collect.addOutput(o, ob, err)
+			continue
+		}
+
+		collect.addOutput(o, ob, err)
 	}
 }

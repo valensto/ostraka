@@ -2,7 +2,6 @@ package workflow
 
 import (
 	"fmt"
-	"github.com/valensto/ostraka/internal/event"
 )
 
 type operator string
@@ -20,24 +19,16 @@ const (
 	Nin operator = "nin"
 )
 
-func getOperator(op string) (operator, error) {
-	o := operator(op)
-	if err := o.isValid(); err != nil {
-		return "", err
-	}
-	return o, nil
-}
-
 func (o operator) String() string {
 	return string(o)
 }
 
-func (o operator) isValid() error {
+func (o operator) isValid() bool {
 	switch o {
 	case And, Or, Gt, Lt, Eq, Ne, Gte, Lte, In, Nin:
-		return nil
+		return true
 	default:
-		return fmt.Errorf("invalid operator: %s", o)
+		return false
 	}
 }
 
@@ -50,27 +41,22 @@ func (o operator) isTopOperator() bool {
 	}
 }
 
-type Condition struct {
-	field      string
-	operator   operator
-	value      any
-	conditions []*Condition
+type condition struct {
+	Field      string      `json:"field,omitempty"`
+	Operator   operator    `json:"operator"`
+	Value      any         `json:"value,omitempty"`
+	Conditions []condition `json:"conditions,omitempty"`
 }
 
-func NewCondition(field, operator string, value any, conditions ...*Condition) (*Condition, error) {
-	op, err := getOperator(operator)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(conditions) > 0 && !op.isTopOperator() {
-		return nil, fmt.Errorf("invalid top operator %s", operator)
+func (c *condition) newFromChildren(field string, operator operator, value any, conditions ...condition) (*condition, error) {
+	if len(conditions) > 0 && (!operator.isTopOperator() || !operator.isValid()) {
+		return nil, fmt.Errorf("invalid operator %s", operator)
 	}
 
 	if len(conditions) > 0 {
-		return &Condition{
-			operator:   op,
-			conditions: conditions,
+		return &condition{
+			Operator:   operator,
+			Conditions: conditions,
 		}, nil
 	}
 
@@ -86,32 +72,45 @@ func NewCondition(field, operator string, value any, conditions ...*Condition) (
 		return nil, fmt.Errorf("invalid condition: value is empty")
 	}
 
-	return &Condition{
-		field:      field,
-		operator:   op,
-		value:      value,
-		conditions: conditions,
+	return &condition{
+		Field:      field,
+		Operator:   operator,
+		Value:      value,
+		Conditions: conditions,
 	}, nil
 }
 
-func (c *Condition) Match(event event.Payload) bool {
+func (c *condition) computeConditions() (*condition, error) {
+	updatedCs := make([]*condition, len(c.Conditions))
+	for i, cs := range c.Conditions {
+		nc, err := cs.computeConditions()
+		if err != nil {
+			return nil, fmt.Errorf("error converting condition yaml: %w", err)
+		}
+		updatedCs[i] = nc
+	}
+
+	return c.newFromChildren(c.Field, c.Operator, c.Value, c.Conditions...)
+}
+
+func (c *condition) match(event payload) bool {
 	if c == nil {
 		return true
 	}
 
-	if len(c.conditions) > 0 {
-		switch c.operator {
+	if len(c.Conditions) > 0 {
+		switch c.Operator {
 		case And:
-			for _, subCondition := range c.conditions {
-				if !subCondition.Match(event) {
+			for _, subCondition := range c.Conditions {
+				if !subCondition.match(event) {
 					return false
 				}
 			}
 			return true
 
 		case Or:
-			for _, subCondition := range c.conditions {
-				if subCondition.Match(event) {
+			for _, subCondition := range c.Conditions {
+				if subCondition.match(event) {
 					return true
 				}
 			}
@@ -125,23 +124,23 @@ func (c *Condition) Match(event event.Payload) bool {
 	return c.matchOperator(event)
 }
 
-func (c *Condition) matchOperator(event event.Payload) bool {
-	v, ok := event[c.field]
+func (c *condition) matchOperator(event payload) bool {
+	v, ok := event[c.Field]
 	if !ok {
 		return false
 	}
 
-	switch c.operator {
+	switch c.Operator {
 	case Eq:
-		return v == c.value
+		return v == c.Value
 	case Ne:
-		return v != c.value
+		return v != c.Value
 	case Gt, Lt, Gte, Lte:
-		return compareNumbers(v, c.value, c.operator)
+		return compareNumbers(v, c.Value, c.Operator)
 	case In:
-		return containsValue(c.value, v)
+		return containsValue(c.Value, v)
 	case Nin:
-		return !containsValue(c.value, v)
+		return !containsValue(c.Value, v)
 	default:
 		return false
 	}

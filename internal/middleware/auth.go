@@ -12,15 +12,17 @@ const (
 )
 
 type Auth struct {
-	Type   string `json:"type"`
-	Params any    `json:"params"`
+	Type   string `json:"type" yaml:"type" validate:"required"`
+	Params any    `json:"params" yaml:"params" validate:"required"`
+
+	Authenticator Authenticator `json:"-" yaml:"-"`
 }
 
 type Authenticator interface {
 	Register(next http.Handler) http.Handler
 }
 
-func NewAuthentication(auth Auth) (Authenticator, error) {
+func loadAuthenticator(auth Auth) (Authenticator, error) {
 	b, err := json.Marshal(auth.Params)
 	if err != nil {
 		return nil, fmt.Errorf("error marshalling authenticator params: %w", err)

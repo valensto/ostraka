@@ -7,8 +7,8 @@ import (
 )
 
 type Token struct {
-	Token      string `json:"token"`
-	QueryParam string `json:"query_param"`
+	Token      string `json:"token" yaml:"token" validate:"required"`
+	QueryParam string `json:"query_param" yaml:"query_param" validate:"required"`
 }
 
 func (config Token) validate() error {

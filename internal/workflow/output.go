@@ -2,47 +2,67 @@ package workflow
 
 import (
 	"fmt"
-	"github.com/valensto/ostraka/internal/event"
 	"github.com/valensto/ostraka/internal/provider"
 )
 
-type Output struct {
-	Name      string
-	Condition *Condition
-	Encoder   *event.Encoder
+type output struct {
+	Name        string     `json:"name" yaml:"name" validate:"required"`
+	Destination string     `json:"destination" yaml:"destination" validate:"required"`
+	Condition   *condition `json:"condition,omitempty" yaml:"condition,omitempty"`
+	Encoder     *encoder   `json:"encoder" yaml:"encoder"`
 
-	Publisher provider.Publisher
+	Params    any `json:"params" yaml:"params" validate:"required"`
+	publisher provider.Publisher
 }
 
-func UnmarshallOutput(name, dst string, condition *Condition, encoder *event.Encoder, params any, opts provider.Options) (*Output, error) {
-	if name == "" {
-		return nil, fmt.Errorf("output name is empty")
-	}
-
-	publisher, err := provider.NewPublisher(dst, params, opts)
+func (o *output) loadPublisher(opts provider.Options) error {
+	publisher, err := provider.NewPublisher(o.Destination, o.Params, opts)
 	if err != nil {
-		return nil, fmt.Errorf("error creating publisher for output %s got: %w", name, err)
+		return err
 	}
 
-	return &Output{
-		Name:      name,
-		Condition: condition,
-		Encoder:   encoder,
-
-		Publisher: publisher,
-	}, nil
+	o.publisher = publisher
+	o.Params = nil
+	return nil
 }
 
-func (o *Output) Publish(event event.Payload) ([]byte, error) {
-	if !o.Condition.Match(event) {
+func (wf *Workflow) loadOutputs(opts provider.Options) error {
+	for i, _ := range wf.Outputs {
+		if err := wf.Outputs[i].loadPublisher(opts); err != nil {
+			return fmt.Errorf("error unmarshalling output %s got: %w", wf.Outputs[i].Name, err)
+		}
+
+		var c *condition
+		if wf.Outputs[i].Condition != nil {
+			uc, err := wf.Outputs[i].Condition.computeConditions()
+			if err != nil {
+				return fmt.Errorf("error converting condition yaml: %w", err)
+			}
+
+			c = uc
+		}
+
+		fmt.Printf("condition for output %s: %v\n", wf.Outputs[i].Name, c)
+		wf.Outputs[i].Condition = c
+	}
+
+	return nil
+}
+
+func (o *output) publish(event payload) ([]byte, error) {
+	if o.publisher == nil {
+		return nil, fmt.Errorf("output %s is not initialized", o.Name)
+	}
+
+	if !o.Condition.match(event) {
 		return nil, fmt.Errorf("event does not match output %s condition", o.Name)
 	}
 
-	b, err := o.Encoder.Encode(event)
+	b, err := o.Encoder.encode(event)
 	if err != nil {
 		return nil, fmt.Errorf("error encoding event for output %s got: %w", o.Name, err)
 	}
 
-	o.Publisher.Publish(b)
+	o.publisher.Publish(b)
 	return b, nil
 }

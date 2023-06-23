@@ -3,10 +3,11 @@ package webui
 import (
 	"fmt"
 	"github.com/go-chi/chi/v5"
-	"github.com/valensto/ostraka/internal/config/env"
+	"github.com/valensto/ostraka/internal/env"
 	ostraHTTP "github.com/valensto/ostraka/internal/http"
 	"github.com/valensto/ostraka/internal/logger"
 	"github.com/valensto/ostraka/internal/middleware"
+	"github.com/valensto/ostraka/internal/provider"
 	"github.com/valensto/ostraka/internal/provider/sse"
 	"github.com/valensto/ostraka/internal/workflow"
 	"golang.org/x/crypto/bcrypt"
@@ -19,11 +20,10 @@ type Webui struct {
 	server *ostraHTTP.Server
 	config env.Webui
 
-	publisher *sse.Publisher
+	publisher provider.Publisher
 }
 
-func New(config env.Webui, server *ostraHTTP.Server, workflows []*workflow.Workflow) (*Webui, error) {
-	mux := chi.NewRouter()
+func New(config env.Webui, server *ostraHTTP.Server) (*Webui, error) {
 	publisher, err := sse.WebUIPublisher(config, server)
 	if err != nil {
 		return nil, fmt.Errorf("cannot create webui publisher: %w", err)
@@ -35,19 +35,30 @@ func New(config env.Webui, server *ostraHTTP.Server, workflows []*workflow.Workf
 		publisher: publisher,
 	}
 
+	return webui, nil
+}
+
+func (webui *Webui) Serve(workflows []*workflow.Workflow) {
+	mux := chi.NewRouter()
+
 	cors := &middleware.CORS{
-		AllowedOrigins: config.AllowedOrigins,
+		AllowedOrigins: webui.config.AllowedOrigins,
 		AllowedMethods: []string{"GET", "POST"},
 	}
 	mux.Use(cors.Init().Handler)
-	server.Router.Handle("/assets/*", http.StripPrefix("/assets/", http.FileServer(http.Dir("ui/dist/assets"))))
-	mux.Get("/dashboard", webui.basicAuth(webui.dashboard()))
-	mux.Get("/workflows", webui.workflows(workflows))
-
-	server.Router.Mount("/webui", mux)
 
 	logger.Get().Info().Msgf("views running on %s:%s/webui/dashboard", webui.server.Host, webui.server.Port)
-	return webui, nil
+	webui.server.Router.Handle("/assets/*", http.StripPrefix("/assets/", http.FileServer(http.Dir("ui/dist/assets"))))
+	mux.Get("/workflows", webui.workflows(workflows))
+	mux.Get("/dashboard", webui.basicAuth(webui.dashboard()))
+
+	webui.server.Router.Mount("/webui", mux)
+}
+
+func (webui *Webui) workflows(workflows []*workflow.Workflow) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		webui.server.Respond(w, r, http.StatusOK, mapWorkflowToDTO(workflows))
+	}
 }
 
 func (webui *Webui) Consume(entry workflow.Entry) {
@@ -99,12 +110,6 @@ func (webui *Webui) isAuth(user, password string) bool {
 func unauthorised(w http.ResponseWriter) {
 	w.Header().Set("WWW-Authenticate", "Basic realm=Restricted")
 	w.WriteHeader(http.StatusUnauthorized)
-}
-
-func (webui *Webui) workflows(workflows []*workflow.Workflow) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		webui.server.Respond(w, r, http.StatusOK, mapWorkflowToDTO(workflows))
-	}
 }
 
 func (webui *Webui) dashboard() http.HandlerFunc {

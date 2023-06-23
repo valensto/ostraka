@@ -12,17 +12,26 @@ import (
 
 type Subscriber interface {
 	Subscribe(event chan<- []byte) error
-	Provider() string
 }
 
 type Publisher interface {
 	Publish(b []byte)
-	Provider() string
 }
 
 type Options struct {
-	Middlewares *middleware.Middlewares
-	Server      *http.Server
+	middlewares *middleware.Middlewares
+	server      *http.Server
+}
+
+func NewOptions(server *http.Server, middlewares *middleware.Middlewares) (Options, error) {
+	if err := middlewares.LoadAuthenticators(); err != nil {
+		return Options{}, fmt.Errorf("error loading authenticators: %w", err)
+	}
+
+	return Options{
+		middlewares: middlewares,
+		server:      server,
+	}, nil
 }
 
 func NewSubscriber(src string, params any, opts Options) (Subscriber, error) {
@@ -33,7 +42,7 @@ func NewSubscriber(src string, params any, opts Options) (Subscriber, error) {
 
 	switch src {
 	case webhook.Webhook:
-		return webhook.NewSubscriber(b, opts.Server, opts.Middlewares)
+		return webhook.NewSubscriber(b, opts.server, opts.middlewares)
 
 	case mqtt.MQTT:
 		return mqtt.NewSubscriber(b)
@@ -51,7 +60,7 @@ func NewPublisher(dst string, params any, opts Options) (Publisher, error) {
 
 	switch dst {
 	case sse.SSE:
-		return sse.NewPublisher(b, opts.Server, opts.Middlewares)
+		return sse.NewPublisher(b, opts.server, opts.middlewares)
 
 	case mqtt.MQTT:
 		return mqtt.NewPublisher(b)

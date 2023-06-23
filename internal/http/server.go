@@ -3,9 +3,10 @@ package http
 import (
 	"encoding/json"
 	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
-	"github.com/valensto/ostraka/internal/config/env"
+	mid "github.com/go-chi/chi/v5/middleware"
+	"github.com/valensto/ostraka/internal/env"
 	"github.com/valensto/ostraka/internal/logger"
+	"github.com/valensto/ostraka/internal/middleware"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
 	"net/http"
@@ -15,12 +16,13 @@ type Server struct {
 	Router *chi.Mux
 	Port   string
 	Host   string
+
+	Middlewares *middleware.Middlewares
 }
 
 func New(config *env.Config) *Server {
 	mux := chi.NewRouter()
-	mux.Use(middleware.Recoverer)
-	mux.Use(middleware.Logger)
+	mux.Use(mid.Recoverer)
 
 	return &Server{
 		Router: mux,
@@ -29,7 +31,7 @@ func New(config *env.Config) *Server {
 	}
 }
 
-func (s *Server) Run() error {
+func (s *Server) Serve() error {
 	h2s := &http2.Server{}
 	server := &http.Server{
 		Addr:    ":" + s.Port,

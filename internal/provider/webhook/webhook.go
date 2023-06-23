@@ -32,24 +32,20 @@ func NewSubscriber(params []byte, server *http.Server, middlewares *middleware.M
 	}
 
 	if p.Auth != "" {
-		s.authenticator, err = middlewares.HTTP.Authenticator(p.Auth)
+		s.authenticator, err = middlewares.Authenticator(p.Auth)
 		if err != nil {
 			return nil, err
 		}
 	}
 
 	if p.CORS != "" {
-		s.cors, err = middlewares.HTTP.Cors(p.CORS)
+		s.cors, err = middlewares.Cors(p.CORS)
 		if err != nil {
 			return nil, err
 		}
 	}
 
 	return &s, nil
-}
-
-func (s *Subscriber) Provider() string {
-	return Webhook
 }
 
 func (s *Subscriber) Subscribe(events chan<- []byte) error {
