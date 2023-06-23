@@ -27,7 +27,7 @@ func (o *output) loadPublisher(opts provider.Options) error {
 }
 
 func (wf *Workflow) loadOutputs(opts provider.Options) error {
-	for i, _ := range wf.Outputs {
+	for i := range wf.Outputs {
 		if err := wf.Outputs[i].loadPublisher(opts); err != nil {
 			return fmt.Errorf("error unmarshalling output %s got: %w", wf.Outputs[i].Name, err)
 		}
@@ -42,7 +42,6 @@ func (wf *Workflow) loadOutputs(opts provider.Options) error {
 			c = uc
 		}
 
-		fmt.Printf("condition for output %s: %v\n", wf.Outputs[i].Name, c)
 		wf.Outputs[i].Condition = c
 	}
 
@@ -63,6 +62,6 @@ func (o *output) publish(event payload) ([]byte, error) {
 		return nil, fmt.Errorf("error encoding event for output %s got: %w", o.Name, err)
 	}
 
-	o.publisher.Publish(b)
-	return b, nil
+	go o.publisher.Publish(b)
+	return event.json()
 }

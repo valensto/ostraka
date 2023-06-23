@@ -3,6 +3,7 @@ package workflow
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 )
 
 type payload map[string]any
@@ -13,6 +14,17 @@ func (e payload) json() ([]byte, error) {
 		return nil, fmt.Errorf("error marshalling eventType to json: %w", ok)
 	}
 	return b, nil
+}
+
+func (e payload) html() ([]byte, error) {
+	var builder strings.Builder
+	builder.WriteString("<ul>\n")
+	for key, value := range e {
+		item := fmt.Sprintf("<li>%s: %v</li>\n", key, value)
+		builder.WriteString(item)
+	}
+	builder.WriteString("</ul>")
+	return []byte(builder.String()), nil
 }
 
 type eventType struct {
