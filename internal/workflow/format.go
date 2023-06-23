@@ -6,15 +6,8 @@ type Format string
 
 const (
 	JSON Format = "json"
+	HTML Format = "html"
 )
-
-func getFormat(f string) (Format, error) {
-	s := Format(f)
-	if err := s.isValid(); err != nil {
-		return "", err
-	}
-	return s, nil
-}
 
 func (f Format) String() string {
 	return string(f)
@@ -23,6 +16,8 @@ func (f Format) String() string {
 func (f Format) isValid() error {
 	switch f {
 	case JSON:
+		return nil
+	case HTML:
 		return nil
 	default:
 		return fmt.Errorf("invalid format: %s", f)

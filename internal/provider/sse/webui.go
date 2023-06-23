@@ -16,7 +16,6 @@ func WebUIPublisher(config env.Webui, server *http.Server) (*Publisher, error) {
 			Token:      config.AuthToken,
 			QueryParam: "token",
 		},
-
 		cors: &middleware.CORS{
 			AllowedOrigins: config.AllowedOrigins,
 			AllowedMethods: []string{"GET", "POST"},

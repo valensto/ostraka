@@ -6,6 +6,7 @@ import (
 	"github.com/valensto/ostraka/internal/http"
 	"github.com/valensto/ostraka/internal/middleware"
 	"github.com/valensto/ostraka/internal/provider/mqtt"
+	"github.com/valensto/ostraka/internal/provider/smtp"
 	"github.com/valensto/ostraka/internal/provider/sse"
 	"github.com/valensto/ostraka/internal/provider/webhook"
 )
@@ -64,6 +65,9 @@ func NewPublisher(dst string, params any, opts Options) (Publisher, error) {
 
 	case mqtt.MQTT:
 		return mqtt.NewPublisher(b)
+
+	case smtp.SMTP:
+		return smtp.NewPublisher(b)
 
 	default:
 		return nil, fmt.Errorf("unknown publisher type: %s", dst)
