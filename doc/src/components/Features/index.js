@@ -52,7 +52,7 @@ function Feature({title, points, ctaLink, ctaTitle}) {
                     <div>
                         <Link
                             className={clsx('button button--lg', styles.btnGradient)}
-                            to="/docs/intro">
+                            to="/docs/getting-started">
                             {ctaTitle}
                         </Link>
                     </div>
