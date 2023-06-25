@@ -5,3 +5,4 @@ vendor/
 examples/
 .github/
 Makefile
+doc/
