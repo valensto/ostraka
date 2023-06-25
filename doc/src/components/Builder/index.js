@@ -6,9 +6,9 @@ import Chevron from "./chevron"
 import styles from "./styles.module.css"
 import {Section} from "../Section";
 
-const S = [60, -320, -740, -1050]
-const M = [60, -300, -740, -1100]
-const L = [60, -300, -740, -1100]
+const S = [60, -300, -700, -1050]
+const M = [100, -300, -680, -1020]
+const L = [140, -300, -700, -1100]
 
 const getTopByIndex = (m, index) => {
     const scale = {
