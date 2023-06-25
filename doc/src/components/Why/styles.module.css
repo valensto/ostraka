@@ -1,0 +1,32 @@
+.section__footer {
+    display: flex;
+}
+
+.section__footer--feature-cards {
+    margin-top: 0;
+    flex-wrap: wrap;
+}
+
+.feature {
+    min-width: 260px;
+    margin: 1.25rem;
+    padding: 1.5rem;
+    flex: 1 1 360px;
+    background: var(--theme-section-odd-bg-color);
+    font-size: var(--font-size-normal);
+    border-radius: var(--ifm-global-border-radius);
+}
+
+.feature__header {
+    margin-bottom: 1rem;
+    font-size: var(--font-size-large);
+    font-weight: var(--ifm-font-weight-bold);
+}
+
+.feature__content {
+    margin: 0;
+}
+
+html[data-theme="light"] .feature {
+    background: var(--theme-card-bg-color);
+}

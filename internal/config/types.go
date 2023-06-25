@@ -3,6 +3,7 @@ package config
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/BurntSushi/toml"
 	"gopkg.in/yaml.v3"
 )
 
@@ -17,6 +18,7 @@ type (
 
 var Extensions = map[Extension]struct{}{
 	".json": {},
+	".toml": {},
 	".yaml": {},
 	".yml":  {},
 }
@@ -37,6 +39,8 @@ func (e Extension) Unmarshal(in []byte, out interface{}) error {
 		return json.Unmarshal(in, out)
 	case ".yaml", ".yml":
 		return yaml.Unmarshal(in, out)
+	case ".toml":
+		return toml.Unmarshal(in, out)
 	default:
 		return fmt.Errorf("extension %s not supported", e)
 	}
