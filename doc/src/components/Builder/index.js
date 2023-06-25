@@ -1,8 +1,8 @@
 import React, {useCallback, useEffect, useState} from "react"
 import useWindowWidth from "../../hooks/useWindowWidth"
 import clsx from "clsx"
-import Highlight from "./Highlight"
-import Chevron from "./chevron"
+import Highlight from "./Highlight.js"
+import Chevron from "./chevron.js"
 import styles from "./styles.module.css"
 import {Section} from "../Section";
 

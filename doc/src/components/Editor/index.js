@@ -2,7 +2,7 @@ import React from 'react';
 import {Section} from "../Section";
 import styles from "./styles.module.css";
 import Highlight from "../Builder/highlight";
-import {workflow} from "./workflow"
+import {workflow} from "./workflow.js"
 
 function Editor(props) {
     return (
