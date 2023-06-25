@@ -1,0 +1,108 @@
+/**
+ * Any CSS included here will be global. The classic template
+ * bundles Infima by default. Infima is a CSS framework designed to
+ * work well for content-centric websites.
+ */
+
+/* You can override the default Infima variables here. */
+:root {
+  --primary-background-color: white;
+  --main-gray: #32343e;
+  --palette-primary: #6EEEFF;
+  --palette-black-10: rgba(0, 0, 0, 0.1);
+  --palette-white: #fff;
+  --palette-white-03: rgba(255, 255, 255, 0.03);
+  --palette-white-05: rgba(255, 255, 255, 0.05);
+  --palette-white-10: rgba(255, 255, 255, 0.1);
+  --palette-white-20: rgba(255, 255, 255, 0.2);
+  --palette-white-30: rgba(255, 255, 255, 0.3);
+  --palette-white-40: rgba(255, 255, 255, 0.4);
+  --palette-white-60: rgba(255, 255, 255, 0.6);
+  --palette-white-darker: #d9d9d9;
+  --main-neutral-raw: 38, 40, 51;
+  --main-neutral: rgb(var(--main-neutral-raw));
+
+
+  --ifm-color-primary: #2633DE;
+  --ifm-color-primary-dark: #1F2FA3;
+  --ifm-color-primary-darker: #1A2790;
+  --ifm-color-primary-darkest: #151E79;
+  --ifm-color-primary-light: #3240FF;
+  --ifm-color-primary-lighter: #3852FF;
+  --ifm-color-primary-lightest: #3D63FF;
+  --ifm-code-font-size: 95%;
+  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.1);
+  --ifm-codeblock-background: #262833;
+
+  --ifm-footer-background-color: #f0f1f5;
+  --ifm-navbar-background-color: var(--primary-background-color);
+  --ifm-hero-background-color: var(--primary-background-color);
+
+  --theme-text-color: #21222c;
+
+  --transition-bezier: cubic-bezier(0.17, 0.67, 0.83, 0.67);
+  --transition-fastest: 100ms;
+
+  --font-family-base: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+  Ubuntu, Cantarell, Helvetica, sans-serif, "Apple Color Emoji",
+  "Segoe UI Emoji", "Android Emoji", EmojiSymbols, "EmojiOne Mozilla",
+  "Twemoji Mozilla", "Segoe UI Symbol", "Noto Color Emoji";
+  --ifm-font-family-base: var(--font-family-base);
+  --ifm-font-family-monospace: SFMono-Regular, Menlo, Monaco, Consolas,
+  "Liberation Mono", "Courier New", monospace;
+  --ifm-font-size-base: var(--font-size-small);
+
+  --main-light-gray: #52556b;
+  --font-size-small: 15px;
+  --font-size-normal: 16px;
+  --font-size-large: 17px;
+  --font-size-big-1: 22px;
+  --font-size-big-2: 24px;
+  --font-size-big-3: 32px;
+  --font-size-big-4: 46px;
+  --font-size-big-5: 64px;
+  --ifm-global-border-radius: 8px;
+  --ifm-h1-font-size: var(--font-size-big-4);
+  --ifm-h2-font-size: var(--font-size-big-2);
+  --ifm-h3-font-size: var(--font-size-big-1);
+  --ifm-h4-font-size: var(--font-size-large);
+
+  --theme-section-odd-bg-color: #f0f1f5;
+
+  --theme-card-bg-color: #f0f1f5;
+  --theme-card-border-radius: 8px;
+  --theme-card-bg-color-hover: rgb(47, 49, 63);
+  --theme-card-border-color: #51535f;
+}
+
+/* For readability concerns, you should choose a lighter palette in dark mode. */
+[data-theme='dark'] {
+  --primary-background-color: #21222c;
+  --main-neutral: #262833;
+  --main-gray: #4b4e5d;
+  --main-light-gray: #b1b5d3;
+
+  --ifm-color-primary: #6EEEFF;
+  --ifm-color-primary-dark: #60DDE8;
+  --ifm-color-primary-darker: #55D3DE;
+  --ifm-color-primary-darkest: #4CB8C8;
+  --ifm-color-primary-light: #7AFAFF;
+  --ifm-color-primary-lighter: #90FDFF;
+  --ifm-color-primary-lightest: #BDFEFF;
+  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
+
+  --theme-section-odd-bg-color: #262833;
+
+  --theme-text-color: #f0f1f5;
+  --ifm-footer-background-color: #262833;
+  --ifm-navbar-background-color: var(--primary-background-color);
+  --ifm-hero-background-color: var(--primary-background-color);
+}
+
+#__docusaurus{
+  background-color: var(--primary-background-color);
+}
+
+html[data-theme='dark'] .navbar .navbar__logo {
+  content: url("/img/dark-mode-logo.svg")
+}
