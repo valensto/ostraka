@@ -14,7 +14,7 @@ const config = {
   url: '/',
   // Set the /<baseUrl>/ pathname under which your site is served
   // For GitHub pages deployment, it is often '/<projectName>/'
-  baseUrl: '/',
+  baseUrl: 'https://ostraka.io',
 
   onBrokenLinks: 'throw',
   onBrokenMarkdownLinks: 'warn',
