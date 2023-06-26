@@ -34,8 +34,8 @@ function HomepageHeader() {
 export default function Home() {
     return (
         <Layout
-            title={`Hi`}
-            description="Effortless event dispatcher. Route events from diverse sources to multiple destinations with Ostraka, an open-source event dispatching tool.">
+            title={`Effortless event dispatcher`}
+            description="Route events from diverse sources to multiple destinations with Ostraka, an open-source event dispatching tool.">
             <HomepageHeader/>
             <main>
                 <Features/>
