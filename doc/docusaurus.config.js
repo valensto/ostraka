@@ -50,7 +50,7 @@ const config = {
         disableSwitch: false,
         respectPrefersColorScheme: true,
       },
-      image: 'img/docusaurus-social-card.jpg',
+      image: 'img/ostraka-social-card.jpg',
       navbar: {
         logo: {
           alt: 'Osaka Logo',

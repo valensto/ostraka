@@ -32,11 +32,10 @@ function HomepageHeader() {
 }
 
 export default function Home() {
-    const {siteConfig} = useDocusaurusContext();
     return (
         <Layout
-            title={`Home`}
-            description="Description will go into a meta tag in <head />">
+            title={`Hi :)`}
+            description="Effortless event dispatcher. Route events from diverse sources to multiple destinations with Ostraka, an open-source event dispatching tool.">
             <HomepageHeader/>
             <main>
                 <Features/>
