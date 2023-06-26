@@ -1,3 +1,7 @@
+.highlight {
+    background-color: var(--main-neutral) !important;
+}
+
 .section {
     width: 100%;
 }
@@ -84,7 +88,6 @@
 .section__subtitle {
     font-size: var(--font-size-big-2);
     font-weight: var(--ifm-font-weight-normal);
-    color: var(--palette-primary-darkest);
 }
 
 .section__subtitle--narrow {
@@ -280,7 +283,7 @@
 .showcase__offset {
     position: relative;
     transform: translateZ(0);
-    transition: top var(--transition-fastest) var(--transition-bezier);
+    transition: top var(--transition-slowest) var(--transition-bezier);
 }
 
 .showcase__button {
